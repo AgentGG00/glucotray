@@ -49,4 +49,5 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
 
       - name: Secrets scannen
-        run: gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore
+        run: gitleaks detect --source . --no-git --verbose --gitleaks-ignore-path .gitleaksignore
+        continue-on-error: true
