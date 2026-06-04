@@ -50,4 +50,3 @@ jobs:
 
       - name: Secrets scannen
         run: gitleaks detect --source . --no-git --verbose --gitleaks-ignore-path .gitleaksignore --no-banner
-        continue-on-error: true
