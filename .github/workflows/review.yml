@@ -6,6 +6,49 @@ on:
       - main
 
 jobs:
-  review:
-    uses: AgentGG00/workflows/.github/workflows/review.yml@main
-    secrets: inherit
+  struktur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pflichtdateien prüfen
+        run: |
+          ERRORS=""
+
+          check_file() {
+            if [ ! -f "$1" ]; then
+              ERRORS="${ERRORS}\n❌ $1 fehlt"
+            else
+              echo "✅ $1 vorhanden"
+            fi
+          }
+
+          check_file "README.md"
+          check_file ".gitignore"
+          check_file "package.json"
+          check_file "src-tauri/tauri.conf.json"
+          check_file "docs/project-plan.md"
+          check_file "docs/project-status.md"
+          check_file "docs/cliff.toml"
+
+          if [ -n "$ERRORS" ]; then
+            echo -e "$ERRORS"
+            exit 1
+          fi
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks installieren
+        run: |
+          wget -qO- https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Secrets scannen
+        run: gitleaks detect --source . --no-git
