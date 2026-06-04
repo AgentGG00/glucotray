@@ -1,0 +1,11 @@
+name: Create Issue
+
+on:
+  push:
+    paths:
+      - 'docs/issues.md'
+
+jobs:
+  issue:
+    uses: AgentGG00/workflows/.github/workflows/create-issue.yml@main
+    secrets: inherit

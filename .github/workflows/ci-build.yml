@@ -1,0 +1,10 @@
+name: CI Build
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  ci:
+    uses: AgentGG00/workflows/.github/workflows/ci-build.yml@main
+    secrets: inherit

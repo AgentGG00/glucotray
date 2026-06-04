@@ -1,0 +1,128 @@
+name: Review
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  struktur:
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+      errors: ${{ steps.check.outputs.errors }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pflichtdateien prüfen
+        id: check
+        run: |
+          ERRORS=""
+          PASSED=""
+
+          check_file() {
+            if [ ! -f "$1" ]; then
+              ERRORS="${ERRORS}\n❌ $1 is missing"
+            else
+              PASSED="${PASSED}\n✅ $1"
+            fi
+          }
+
+          check_file "README.md"
+          check_file ".gitignore"
+          check_file "docs/project-plan.md"
+          check_file "docs/project-status.md"
+          check_file "docs/cliff.toml"
+
+          echo "passed<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$PASSED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "errors<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$ERRORS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.scan.outputs.result }}
+      details: ${{ steps.scan.outputs.details }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks installieren
+        run: |
+          wget -qO- https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar -xz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Secrets scannen
+        id: scan
+        run: |
+          OUTPUT=$(gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore --verbose 2>&1 || true)
+
+          LEAKS=$(echo "$OUTPUT" | grep "leaks found" | grep -v "^0 leaks" || true)
+
+          if [ -n "$LEAKS" ]; then
+            echo "result=failed" >> $GITHUB_OUTPUT
+
+            DETAILS=$(echo "$OUTPUT" | grep -E "^(File:|RuleID:)" \
+              | sed 's/File:/📄/g' \
+              | sed 's/RuleID:/🔑/g' \
+              | paste - - \
+              | awk '{print "- " $1 " " $2 " " $3 " " $4}')
+
+            echo "details<<EOF" >> $GITHUB_OUTPUT
+            echo "$DETAILS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "result=passed" >> $GITHUB_OUTPUT
+            echo "details=" >> $GITHUB_OUTPUT
+          fi
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: [struktur, secrets-scan]
+    if: always()
+    permissions:
+      pull-requests: write
+    steps:
+      - name: PR kommentieren
+        uses: actions/github-script@v7
+        env:
+          STRUKTUR_RESULT: ${{ needs.struktur.result }}
+          SECRETS_RESULT: ${{ needs.secrets-scan.outputs.result }}
+          FILE_ERRORS: ${{ needs.struktur.outputs.errors }}
+          FILE_PASSED: ${{ needs.struktur.outputs.passed }}
+          SECRET_DETAILS: ${{ needs.secrets-scan.outputs.details }}
+        with:
+          script: |
+            const strukturPassed = process.env.STRUKTUR_RESULT === 'success';
+            const secretsPassed = process.env.SECRETS_RESULT === 'passed';
+            const allPassed = strukturPassed && secretsPassed;
+
+            const fileErrors = process.env.FILE_ERRORS.trim();
+            const filePassed = process.env.FILE_PASSED.trim();
+            const secretDetails = process.env.SECRET_DETAILS.trim();
+
+            const strukturSection = strukturPassed
+              ? `✅ **Required files** – all present\n${filePassed}`
+              : `❌ **Required files** – missing files detected\n${fileErrors}`;
+
+            const secretsSection = secretsPassed
+              ? `✅ **Secrets scan** – no secrets detected`
+              : `❌ **Secrets scan** – potential secrets detected\n${secretDetails}`;
+
+            const body = allPassed
+              ? `## ✅ Review passed\n\n${strukturSection}\n\n${secretsSection}\n\nReady to merge.`
+              : `## ❌ Review failed\n\n${strukturSection}\n\n${secretsSection}\n\n**Fix the above before merging.**`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
