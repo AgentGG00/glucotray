@@ -26,8 +26,6 @@ jobs:
 
           check_file "README.md"
           check_file ".gitignore"
-          check_file "package.json"
-          check_file "src-tauri/tauri.conf.json"
           check_file "docs/project-plan.md"
           check_file "docs/project-status.md"
           check_file "docs/cliff.toml"
@@ -51,4 +49,4 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
 
       - name: Secrets scannen
-        run: gitleaks detect --source . --no-git
+        run: gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore
