@@ -1,0 +1,14 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    uses: AgentGG00/workflows/.github/workflows/release.yml@main
+    secrets: inherit

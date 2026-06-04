@@ -1,0 +1,11 @@
+name: Review
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  review:
+    uses: AgentGG00/workflows/.github/workflows/review.yml@main
+    secrets: inherit
