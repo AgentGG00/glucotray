@@ -1,2 +1,6 @@
 # False positives in documentation
 docs/
+README.md:sidekiq-secret:42
+README.md:aws-access-token:221
+README.md:aws-access-token:223
+README.md:aws-access-token:259
