@@ -8,19 +8,24 @@ on:
 jobs:
   struktur:
     runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+      errors: ${{ steps.check.outputs.errors }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Pflichtdateien prüfen
+        id: check
         run: |
           ERRORS=""
+          PASSED=""
 
           check_file() {
             if [ ! -f "$1" ]; then
-              ERRORS="${ERRORS}\n❌ $1 fehlt"
+              ERRORS="${ERRORS}\n❌ \`$1\` is missing"
             else
-              echo "✅ $1 vorhanden"
+              PASSED="${PASSED}\n✅ \`$1\`"
             fi
           }
 
@@ -30,13 +35,19 @@ jobs:
           check_file "docs/project-status.md"
           check_file "docs/cliff.toml"
 
-          if [ -n "$ERRORS" ]; then
-            echo -e "$ERRORS"
-            exit 1
-          fi
+          echo "passed<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$PASSED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "errors<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$ERRORS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
   secrets-scan:
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.scan.outputs.result }}
+      details: ${{ steps.scan.outputs.details }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,4 +60,57 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
 
       - name: Secrets scannen
-        run: gitleaks detect --source . --no-git --verbose --gitleaks-ignore-path .gitleaksignore --no-banner
+        id: scan
+        run: |
+          OUTPUT=$(gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore --verbose 2>&1 || true)
+
+          if echo "$OUTPUT" | grep -q "leaks found"; then
+            echo "result=failed" >> $GITHUB_OUTPUT
+
+            DETAILS=$(echo "$OUTPUT" | grep -E "^(Finding:|File:|RuleID:|Line:)" | sed 's/Finding:.*//g' | paste - - - | awk '{print "- `" $2 "` line " $4 " — " $6}' || echo "$OUTPUT" | grep -E "File:|RuleID:" | sed 's/File:/📄 File:/g' | sed 's/RuleID:/🔑 Rule:/g')
+
+            echo "details<<EOF" >> $GITHUB_OUTPUT
+            echo "$DETAILS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "result=passed" >> $GITHUB_OUTPUT
+            echo "details=" >> $GITHUB_OUTPUT
+          fi
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: [struktur, secrets-scan]
+    if: always()
+    permissions:
+      pull-requests: write
+    steps:
+      - name: PR kommentieren
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const strukturPassed = '${{ needs.struktur.result }}' === 'success';
+            const secretsPassed = '${{ needs.secrets-scan.outputs.result }}' === 'passed';
+            const allPassed = strukturPassed && secretsPassed;
+
+            const fileErrors = `${{ needs.struktur.outputs.errors }}`.trim();
+            const filePassed = `${{ needs.struktur.outputs.passed }}`.trim();
+            const secretDetails = `${{ needs.secrets-scan.outputs.details }}`.trim();
+
+            const strukturSection = strukturPassed
+              ? `✅ **Required files** – all present\n${filePassed}`
+              : `❌ **Required files** – missing files detected\n${fileErrors}`;
+
+            const secretsSection = secretsPassed
+              ? `✅ **Secrets scan** – no secrets detected`
+              : `❌ **Secrets scan** – potential secrets detected\n${secretDetails}`;
+
+            const body = allPassed
+              ? `## ✅ Review passed\n\n${strukturSection}\n\n${secretsSection}\n\nReady to merge.`
+              : `## ❌ Review failed\n\n${strukturSection}\n\n${secretsSection}\n\n**Fix the above before merging.**`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
