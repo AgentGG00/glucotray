@@ -64,9 +64,9 @@ jobs:
         run: |
           OUTPUT=$(gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore --verbose 2>&1 || true)
 
-          LEAKS=$(echo "$OUTPUT" | grep "leaks found" | grep -v "^0 leaks" || true)
+          LEAK_COUNT=$(echo "$OUTPUT" | grep -oE 'leaks found: [0-9]+' | grep -oE '[0-9]+' || echo "0")
 
-          if [ -n "$LEAKS" ]; then
+          if [ "$LEAK_COUNT" -gt "0" ]; then
             echo "result=failed" >> $GITHUB_OUTPUT
 
             DETAILS=$(echo "$OUTPUT" | grep -E "^(File:|RuleID:)" \
