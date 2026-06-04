@@ -23,9 +23,9 @@ jobs:
 
           check_file() {
             if [ ! -f "$1" ]; then
-              ERRORS="${ERRORS}\n❌ \`$1\` is missing"
+              ERRORS="${ERRORS}\n❌ $1 is missing"
             else
-              PASSED="${PASSED}\n✅ \`$1\`"
+              PASSED="${PASSED}\n✅ $1"
             fi
           }
 
@@ -64,10 +64,16 @@ jobs:
         run: |
           OUTPUT=$(gitleaks detect --source . --no-git --gitleaks-ignore-path .gitleaksignore --verbose 2>&1 || true)
 
-          if echo "$OUTPUT" | grep -q "leaks found"; then
+          LEAKS=$(echo "$OUTPUT" | grep "leaks found" | grep -v "^0 leaks" || true)
+
+          if [ -n "$LEAKS" ]; then
             echo "result=failed" >> $GITHUB_OUTPUT
 
-            DETAILS=$(echo "$OUTPUT" | grep -E "^(Finding:|File:|RuleID:|Line:)" | sed 's/Finding:.*//g' | paste - - - | awk '{print "- `" $2 "` line " $4 " — " $6}' || echo "$OUTPUT" | grep -E "File:|RuleID:" | sed 's/File:/📄 File:/g' | sed 's/RuleID:/🔑 Rule:/g')
+            DETAILS=$(echo "$OUTPUT" | grep -E "^(File:|RuleID:)" \
+              | sed 's/File:/📄/g' \
+              | sed 's/RuleID:/🔑/g' \
+              | paste - - \
+              | awk '{print "- " $1 " " $2 " " $3 " " $4}')
 
             echo "details<<EOF" >> $GITHUB_OUTPUT
             echo "$DETAILS" >> $GITHUB_OUTPUT
