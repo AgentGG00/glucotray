@@ -27,7 +27,16 @@
       "title": "Credentials",
       "username": "Username",
       "password": "Password",
-      "example": "Example: your email or your Dexcom username"
+      "example": "Example: your email or your Dexcom username",
+      "type_email": "Email",
+      "type_phone": "Phone number",
+      "email": "Email address",
+      "phone": "Phone number",
+      "phone_invalid": "Invalid phone number",
+      "phone_valid": "Valid phone number",
+      "email_invalid": "Invalid email address",
+      "email_valid": "Valid email address",
+      "email_suggestion": "Did you mean"
     },
     "settings": {
       "title": "Settings",

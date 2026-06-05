@@ -8,7 +8,7 @@
     "region": {
       "title": "Welche Region?",
       "us": "USA",
-      "ous": "Outside USA",
+      "ous": "Außerhalb der USA",
       "jp": "Japan"
     },
     "requirements": {
@@ -27,7 +27,16 @@
       "title": "Anmeldedaten",
       "username": "Benutzername",
       "password": "Passwort",
-      "example": "Beispiel: deine E-Mail oder dein Dexcom-Benutzername"
+      "example": "Beispiel: deine E-Mail oder dein Dexcom-Benutzername",
+      "type_email": "E-Mail",
+      "type_phone": "Telefonnummer",
+      "email": "E-Mail-Adresse",
+      "phone": "Telefonnummer",
+      "phone_invalid": "Ungültige Telefonnummer",
+      "phone_valid": "Gültige Telefonnummer",
+      "email_invalid": "Ungültige E-Mail-Adresse",
+      "email_valid": "Gültige E-Mail-Adresse",
+      "email_suggestion": "Meintest du"
     },
     "settings": {
       "title": "Einstellungen",

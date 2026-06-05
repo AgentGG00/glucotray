@@ -82,3 +82,166 @@
     background-color: var(--bg-primary);
     color: var(--text-muted);
 }
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.field-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.text-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 400px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.text-input:focus {
+    border-color: var(--accent);
+}
+
+.text-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.example-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.error-text {
+    font-size: 0.875rem;
+    color: var(--danger);
+    margin-top: 0.5rem;
+}
+
+.loading-overlay {
+    margin-top: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.input-valid {
+    border-color: var(--success);
+}
+
+.input-invalid {
+    border-color: var(--danger);
+}
+
+.validation-text {
+    font-size: 0.75rem;
+    margin-top: -0.25rem;
+}
+
+.validation-text.valid {
+    color: var(--success);
+}
+
+.validation-text.invalid {
+    color: var(--danger);
+}
+
+.suggestion-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    text-decoration: underline;
+}
+
+.suggestion-btn:hover {
+    opacity: 0.8;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 400px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.input-wrapper .text-input {
+    width: 100%;
+    padding-right: 2.5rem;
+}
+
+.eye-btn {
+    position: absolute;
+    right: 0.625rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.eye-btn:hover {
+    color: var(--text-primary);
+}
+
+.eye-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.password-display {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}
+
+.password-manager-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+.auth-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
