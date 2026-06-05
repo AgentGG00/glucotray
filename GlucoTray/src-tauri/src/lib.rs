@@ -6,9 +6,9 @@ mod error;
 
 use db::init_db;
 use error::init_logger;
-use keychain::get_password;
-use db::get_setting;
-use dexcom::Region;
+use keychain::{get_password, save_credentials};
+use db::{get_setting, set_setting};
+use dexcom::{Region, DexcomClient};
 use tauri::Manager;
 
 #[tauri::command]
@@ -16,11 +16,49 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+async fn validate_credentials(username: String, password: String, region: String) -> Result<(), String> {
+    let r = match region.as_str() {
+        "ous" => Region::Ous,
+        "jp" => Region::Jp,
+        _ => Region::Us,
+    };
+
+    let mut client = DexcomClient::new(r);
+    client.authenticate(&username, &password).await
+}
+
+#[tauri::command]
+async fn save_wizard_data(
+    username: String,
+    password: String,
+    region: String,
+    sensor: String,
+    unit: String,
+    threshold_low: i32,
+    threshold_high: i32,
+    autostart: bool,
+    db_path: String,
+) -> Result<(), String> {
+    let pool = init_db(&db_path).await.map_err(|e| e.to_string())?;
+
+    save_credentials(&username, &password).map_err(|e| e.to_string())?;
+    set_setting(&pool, "username", &username).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "region", &region).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "sensor", &sensor).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "unit", &unit).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_low", &threshold_low.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_high", &threshold_high.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "autostart", &autostart.to_string()).await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, validate_credentials, save_wizard_data])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
                 .expect("Failed to get log dir");
@@ -56,6 +94,7 @@ pub fn run() {
 
             Ok(())
         })
+        .plugin(tauri_plugin_os::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
