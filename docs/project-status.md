@@ -31,18 +31,18 @@
 
 ### Features
 #### feat: Wizard
-- [ ] G6 / G7 selection screen
-- [ ] Prerequisites checklist
-- [ ] Credentials input
-- [ ] Live API validation
-- [ ] Settings screen (unit, thresholds, color scheme, autostart)
-- [ ] Completion screen
+- [x] G6 / G7 selection screen
+- [x] Prerequisites checklist
+- [x] Credentials input
+- [x] Live API validation
+- [x] Settings screen (unit, thresholds, color scheme, autostart)
+- [x] Completion screen
 
 #### feat: Settings
-- [ ] Autostart toggle
-- [ ] Unit selection
-- [ ] Threshold configuration
-- [ ] Color scheme configuration
+- [x] Autostart toggle
+- [x] Unit selection
+- [x] Threshold configuration
+- [x] Color scheme configuration
 
 #### feat: Error Handling
 - [ ] Invalid credentials
