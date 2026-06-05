@@ -17,7 +17,7 @@
 
 ### Backend
 - [x] Dexcom Share API connection
-- [ ] OS Keychain integration (Windows + Linux)
+- [x] OS Keychain integration (Windows + Linux)
 - [x] DB - Worker
 - [x] SQLite database setup
 - [x] Polling logic (150s interval)

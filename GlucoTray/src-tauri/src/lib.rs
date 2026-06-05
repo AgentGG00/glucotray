@@ -1,6 +1,7 @@
 mod dexcom;
 mod db;
 mod worker;
+mod keychain;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
