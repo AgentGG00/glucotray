@@ -1,23 +1,28 @@
-import { register, init, getLocaleFromNavigator } from "svelte-i18n";
+import { register, init } from "svelte-i18n";
+import { locale as osLocale } from "@tauri-apps/plugin-os";
 
-export function setupI18n(): void {
+export async function setupI18n(): Promise<void> {
     register("de", () => import("./de.json"));
     register("en", () => import("./en.json"));
     register("jp", () => import("./jp.json"));
 
-    const locale = detectLocale();
+    const detectedLocale = await detectLocale();
 
     init({
         fallbackLocale: "en",
-        initialLocale: locale,
+        initialLocale: detectedLocale,
     });
 }
 
-function detectLocale(): string {
-    const nav = getLocaleFromNavigator() ?? "en";
-    const lang = nav.split("-")[0].toLowerCase();
-
-    if (lang === "de") return "de";
-    if (lang === "ja" || lang === "jp") return "jp";
-    return "en";
+async function detectLocale(): Promise<string> {
+    try {
+        const raw = await osLocale();
+        if (!raw) return "en";
+        const lang = raw.split("-")[0].toLowerCase();
+        if (lang === "de") return "de";
+        if (lang === "ja") return "jp";
+        return "en";
+    } catch {
+        return "en";
+    }
 }

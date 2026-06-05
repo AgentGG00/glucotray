@@ -4,11 +4,15 @@
     import { initTheme } from "$lib/theme";
     import { setupI18n } from "$lib/i18n";
 
-    setupI18n();
+    const i18nReady = setupI18n();
 
     onMount(() => {
         initTheme();
     });
 </script>
 
-<slot />
+{#await i18nReady}
+    <div class="loading">...</div>
+{:then}
+    <slot />
+{/await}
