@@ -57,3 +57,49 @@ body {
     font-family: "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
+
+.btn-cancel {
+    padding: 0.5rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.btn-next {
+    padding: 0.5rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    background-color: var(--accent);
+    color: var(--bg-primary);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-next:disabled {
+    background-color: var(--bg-elevated);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.btn-back {
+    padding: 0.5rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.btn-submit {
+    padding: 0.5rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    background-color: var(--success);
+    color: var(--bg-primary);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}

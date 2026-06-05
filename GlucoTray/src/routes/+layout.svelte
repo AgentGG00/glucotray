@@ -1,5 +1,5 @@
 <script lang="ts">
-    import "../app.css";
+    import "$lib/styles/app.css";
     import { onMount } from "svelte";
     import { initTheme } from "$lib/theme";
     import { setupI18n } from "$lib/i18n";
