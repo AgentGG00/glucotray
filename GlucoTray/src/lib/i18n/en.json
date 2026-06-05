@@ -1,0 +1,59 @@
+{
+  "wizard": {
+    "sensor": {
+      "title": "Which sensor system?",
+      "g6": "G6",
+      "g7": "G7"
+    },
+    "region": {
+      "title": "Which region?",
+      "us": "USA",
+      "ous": "Outside USA",
+      "jp": "Japan"
+    },
+    "requirements": {
+      "title": "Requirements",
+      "app_installed": "Dexcom app is installed",
+      "share_active": "Dexcom Share is enabled",
+      "follower_added": "At least one follower has been added"
+    },
+    "buttons": {
+      "next": "Next",
+      "back": "Back",
+      "cancel": "Cancel",
+      "submit": "Confirm"
+    },
+    "credentials": {
+      "title": "Credentials",
+      "username": "Username",
+      "password": "Password",
+      "example": "Example: your email or your Dexcom username"
+    },
+    "settings": {
+      "title": "Settings",
+      "unit": "Unit",
+      "unit_mgdl": "mg/dL",
+      "unit_mmol": "mmol/L",
+      "autostart": "Autostart on login",
+      "threshold_low": "Low threshold",
+      "threshold_high": "High threshold",
+      "color_scheme": "Color scheme"
+    },
+    "review": {
+      "title": "Review",
+      "sensor": "Sensor",
+      "region": "Region",
+      "username": "Username",
+      "unit": "Unit",
+      "autostart": "Autostart",
+      "edit": "Edit"
+    },
+    "validation": {
+      "checking": "Checking connection...",
+      "success": "Connection successful",
+      "error_credentials": "Username or password incorrect",
+      "error_no_session": "No active Share session found",
+      "error_timeout": "Connection failed"
+    }
+  }
+}

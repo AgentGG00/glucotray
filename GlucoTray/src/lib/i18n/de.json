@@ -1,0 +1,59 @@
+{
+  "wizard": {
+    "sensor": {
+      "title": "Welches Sensorsystem?",
+      "g6": "G6",
+      "g7": "G7"
+    },
+    "region": {
+      "title": "Welche Region?",
+      "us": "USA",
+      "ous": "Outside USA",
+      "jp": "Japan"
+    },
+    "requirements": {
+      "title": "Voraussetzungen",
+      "app_installed": "Dexcom App ist installiert",
+      "share_active": "Dexcom Share ist aktiviert",
+      "follower_added": "Mindestens ein Follower ist eingetragen"
+    },
+    "buttons": {
+      "next": "Weiter",
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "submit": "Bestätigen"
+    },
+    "credentials": {
+      "title": "Anmeldedaten",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "example": "Beispiel: deine E-Mail oder dein Dexcom-Benutzername"
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "unit": "Einheit",
+      "unit_mgdl": "mg/dL",
+      "unit_mmol": "mmol/L",
+      "autostart": "Autostart bei Anmeldung",
+      "threshold_low": "Unterer Grenzwert",
+      "threshold_high": "Oberer Grenzwert",
+      "color_scheme": "Farbschema"
+    },
+    "review": {
+      "title": "Überprüfung",
+      "sensor": "Sensor",
+      "region": "Region",
+      "username": "Benutzername",
+      "unit": "Einheit",
+      "autostart": "Autostart",
+      "edit": "Ändern"
+    },
+    "validation": {
+      "checking": "Verbindung wird überprüft...",
+      "success": "Verbindung erfolgreich",
+      "error_credentials": "Benutzername oder Passwort falsch",
+      "error_no_session": "Keine aktive Share-Session gefunden",
+      "error_timeout": "Verbindung fehlgeschlagen"
+    }
+  }
+}
