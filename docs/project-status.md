@@ -11,9 +11,9 @@
 - [x] .gitignore
 - [x] CONTRIBUTING.md
 - [x] projekt-plan.md / projekt-plan-en.md
-- [ ] Tauri project initialized
-- [ ] Svelte frontend initialized
-- [ ] GitHub Actions workflow created
+- [x] Tauri project initialized
+- [x] Svelte frontend initialized
+- [x] GitHub Actions workflow created
 
 ### Backend
 - [ ] Dexcom Share API connection
