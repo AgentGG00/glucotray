@@ -46,7 +46,16 @@
       "autostart": "ログイン時に自動起動",
       "threshold_low": "低しきい値",
       "threshold_high": "高しきい値",
-      "color_scheme": "カラースキーム"
+      "color_scheme": "カラースキーム",
+      "select_placeholder": "値を選択",
+      "select_unit_first": "先に単位を選択してください",
+      "color_hint": "デフォルトの色は臨床推奨に基づいています。",
+      "zone_very_high": "非常に高い",
+      "zone_high": "高い",
+      "zone_normal": "正常",
+      "zone_low": "低い",
+      "zone_critical_low": "危険に低い",
+      "autostart_label": "WindowsとともにGlucoTrayを起動しますか？"
     },
     "review": {
       "title": "確認",
@@ -63,6 +72,26 @@
       "error_credentials": "ユーザー名またはパスワードが間違っています",
       "error_no_session": "アクティブなShareセッションが見つかりません",
       "error_timeout": "接続に失敗しました"
+    },
+    "completion": {
+    "title": "準備完了！",
+    "subtitle": "設定が保存されました。",
+    "saving": "保存中...",
+    "error": "保存中にエラーが発生しました",
+    "summary_sensor": "センサー",
+    "summary_region": "地域",
+    "summary_username": "ユーザー名",
+    "summary_unit": "単位",
+    "summary_threshold_low": "最小値",
+    "summary_threshold_high": "最大値",
+    "summary_autostart": "自動起動",
+    "summary_colors": "カラースキーム",
+    "autostart_on": "有効",
+    "autostart_off": "無効",
+    "region_us": "アメリカ",
+    "region_ous": "アメリカ以外",
+    "region_jp": "日本",
+    "finish": "GlucoTrayを起動"
     }
   }
 }

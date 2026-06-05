@@ -46,7 +46,18 @@
       "autostart": "Autostart on login",
       "threshold_low": "Low threshold",
       "threshold_high": "High threshold",
-      "color_scheme": "Color scheme"
+      "color_scheme": "Color scheme",
+      "color_scheme_light": "Light",
+      "color_scheme_dark": "Dark",
+      "select_placeholder": "Select value",
+      "select_unit_first": "Select unit first",
+      "color_hint": "Default colors correspond to clinical recommendations.",
+      "zone_very_high": "VERY HIGH",
+      "zone_high": "HIGH",
+      "zone_normal": "NORMAL",
+      "zone_low": "LOW",
+      "zone_critical_low": "CRITICAL LOW",
+      "autostart_label": "Should GlucoTray start with Windows?"
     },
     "review": {
       "title": "Review",
@@ -63,6 +74,26 @@
       "error_credentials": "Username or password incorrect",
       "error_no_session": "No active Share session found",
       "error_timeout": "Connection failed"
+    },
+    "completion": {
+    "title": "All set!",
+    "subtitle": "Your settings have been saved.",
+    "saving": "Saving...",
+    "error": "Error while saving",
+    "summary_sensor": "Sensor",
+    "summary_region": "Region",
+    "summary_username": "Username",
+    "summary_unit": "Unit",
+    "summary_threshold_low": "Min threshold",
+    "summary_threshold_high": "Max threshold",
+    "summary_autostart": "Autostart",
+    "summary_colors": "Color scheme",
+    "autostart_on": "Enabled",
+    "autostart_off": "Disabled",
+    "region_us": "USA",
+    "region_ous": "Outside US",
+    "region_jp": "Japan",
+    "finish": "Launch GlucoTray"
     }
   }
 }

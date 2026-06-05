@@ -20,36 +20,55 @@ fn greet(name: &str) -> String {
 async fn validate_credentials(username: String, password: String, region: String) -> Result<(), String> {
     let r = match region.as_str() {
         "ous" => Region::Ous,
-        "jp" => Region::Jp,
-        _ => Region::Us,
+        "jp"  => Region::Jp,
+        _     => Region::Us,
     };
 
     let mut client = DexcomClient::new(r);
-    client.authenticate(&username, &password).await
+    client.authenticate(&username, &password).await?;
+
+    save_credentials(&username, &password).map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
 async fn save_wizard_data(
+    app: tauri::AppHandle,
     username: String,
-    password: String,
     region: String,
     sensor: String,
     unit: String,
     threshold_low: i32,
     threshold_high: i32,
     autostart: bool,
-    db_path: String,
+    color_critical_low: String,
+    color_low: String,
+    color_normal: String,
+    color_high: String,
+    color_very_high: String,
 ) -> Result<(), String> {
-    let pool = init_db(&db_path).await.map_err(|e| e.to_string())?;
+    let db_path = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("glucotray.db");
 
-    save_credentials(&username, &password).map_err(|e| e.to_string())?;
-    set_setting(&pool, "username", &username).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "region", &region).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "sensor", &sensor).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "unit", &unit).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "threshold_low", &threshold_low.to_string()).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "threshold_high", &threshold_high.to_string()).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "autostart", &autostart.to_string()).await.map_err(|e| e.to_string())?;
+    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
+    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
+
+    set_setting(&pool, "username",           &username).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "region",             &region).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "sensor",             &sensor).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "unit",               &unit).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_low",      &threshold_low.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_high",     &threshold_high.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "autostart",          &autostart.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_critical_low", &color_critical_low).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_low",          &color_low).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_normal",       &color_normal).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -84,8 +103,8 @@ pub fn run() {
 
                     let region = match region_str.as_str() {
                         "ous" => Region::Ous,
-                        "jp" => Region::Jp,
-                        _ => Region::Us,
+                        "jp"  => Region::Jp,
+                        _     => Region::Us,
                     };
 
                     worker::start_worker(pool, username, password, region).await;
