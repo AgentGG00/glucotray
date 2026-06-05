@@ -16,10 +16,11 @@
 - [x] GitHub Actions workflow created
 
 ### Backend
-- [ ] Dexcom Share API connection
+- [x] Dexcom Share API connection
 - [ ] OS Keychain integration (Windows + Linux)
-- [ ] SQLite database setup
-- [ ] Polling logic (150s interval)
+- [x] DB - Worker
+- [x] SQLite database setup
+- [x] Polling logic (150s interval)
 - [ ] Error handling
 
 ### Frontend
