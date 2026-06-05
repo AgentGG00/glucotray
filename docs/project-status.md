@@ -21,7 +21,7 @@
 - [x] DB - Worker
 - [x] SQLite database setup
 - [x] Polling logic (150s interval)
-- [ ] Error handling
+- [x] Error handling
 
 ### Frontend
 - [ ] Tray icon with live value
@@ -65,4 +65,4 @@
 - [ ] Wizard flow tested end-to-end
 - [ ] API error cases tested
 - [ ] Windows 11 tested
-- [ ] Linux KDE Plasma testedw
+- [ ] Linux KDE Plasma tested
