@@ -5,7 +5,7 @@
 - **Repo:** https://github.com/AgentGG00/glucotray
 - **Publisher:** AgentGG
 - **Lizenz:** MIT
-- **Status:** Wizard vollständig (Step 1–5), nächstes Ziel: Tray-Icon mit Live-Wert
+- **Status:** Wizard + Tray vollständig, Autostart implementiert – nächstes Ziel: Fehlerbehandlung Worker + Settings-Fenster
 
 ## Stack
 - **Frontend:** Svelte 5 + TypeScript + Tailwind CSS
@@ -19,50 +19,72 @@
 - `dev` – aktive Entwicklung
 - Feature-Branches von `dev`: `feature/name`, `fix/name`
 
+## Daten & Einheiten
+- API liefert immer mg/dL als arabische Ziffern
+- Einzige Umrechnungsstelle: `db.rs` → `insert_reading` schreibt `value_mgdl` + `value_mmol`
+- Schwellwerte in DB immer als mg/dL Integer (`threshold_low`, `threshold_high`)
+- On-the-fly Umrechnung nur für Anzeige im Frontend
+- Feste klinische Grenzen: Very High = 250 mg/dL, Critical Low = 54 mg/dL
+- API-String `"Low"` triggert ebenfalls Critical Low Zone
+
+## AppState
+- `unit: String` – wird beim App-Start aus DB geladen
+- Bei Einheiten-Änderung in Settings: App-Neustart erforderlich
+- `TrayState` – enthält `update_available: bool` für Update-Badge
+
+## Tray-Icon
+- Dynamisch gerendert via `imageproc` + `ab_glyph` + NotoSans-Bold.ttf
+- Zeigt Wert in mg/dL oder mmol/L je nach `AppState.unit`
+- Trendpfeil als Unicode: ⇈ ↑ ↗ → ↘ ↓ ⇊
+- 5 Farbzonen: Critical Low / Low / Normal / High / Very High
+- N/A bei `is_valid = false` oder `value = 0`
+- Update-Badge: roter Punkt oben rechts wenn `update_available = true`
+- Tooltip zeigt beide Einheiten: 97 mg/dL / 5.4 mmol/L ↑
+- Kontextmenü: GlucoTray (disabled) / Update check / Quit / Restart
+- Linksklick öffnet Settings-Fenster (noch zu bauen)
+
+## App-Flow
+
+### Erster Start
+App startet → DB leer → Fenster sichtbar → Wizard → Wizard abgeschlossen → save_wizard_data → restart_app → Neustart → normaler Start
+
+### Normaler Start
+DB init → unit + autostart aus DB → AppState befüllen → autostart enable/disable → Worker starten → Tray aktiv → erster Start: Toast-Notification (einmalig, tray_hint_shown in DB)
+
+## Autostart
+- `tauri-plugin-autostart` – Windows Registry + Linux .desktop
+- Wird bei jedem App-Start aus DB gelesen und gesetzt
+- Bei Änderung in Settings: Neustart erforderlich damit Änderung greift
+
 ## Wizard – aktueller Stand
 
 ### Step 1 – Sensor & Region
-- G6 / G7 Auswahl
-- Region: USA / Außerhalb der USA / Japan
-- Voraussetzungs-Checklist
-- Sprache per Flag-Button wechselbar (de/en/jp)
+- G6 / G7 Auswahl, Region: USA / OUS / Japan
+- Voraussetzungs-Checklist, Sprache per Flag-Button (de/en/jp)
 
 ### Step 2 – Credentials
-- Login-Typ wählbar: E-Mail oder Telefonnummer
-- E-Mail: Regex-Validierung + Levenshtein-Tippfehler-Erkennung für gängige Domains
-- Telefon: libphonenumber-js, nationale 0 → internationale Vorwahl, OS-Locale für Land
-- Passwort: custom •••-Darstellung, letztes Zeichen 3s sichtbar, Eye-Toggle, Paste-Support, Passwort-Manager-kompatibel
+- Login-Typ: E-Mail oder Telefonnummer
+- E-Mail: Regex + Levenshtein-Tippfehler-Erkennung
+- Telefon: libphonenumber-js, OS-Locale für Land
+- Passwort: custom Darstellung, Eye-Toggle, Paste-Support
 - `externalError` Prop für Fehler aus Step 3
 
 ### Step 3 – Auth Loading
-- Spinner + i18n-Text
 - `onMount` → `invoke("validate_credentials")`
-- Bei Erfolg: Passwort wird direkt im OS Keychain gespeichert (`save_credentials`)
-- Success → Step 4
-- Fail → Step 2 mit Fehlermeldung
+- Erfolg → Step 4, Fehler → Step 2 mit Fehlermeldung
 
 ### Step 4 – Settings
 - Einheit: mg/dL oder mmol/L (Radio-Buttons)
-- Dropdowns ausgegraut bis Einheit gewählt
-- Min-Grenzwert: 2.8–4.5 mmol/L (feste Schritte), Anzeige je nach Einheit umgerechnet
-- Max-Grenzwert: 8.0–13.0 mmol/L, nur Werte > Min verfügbar
-- Farbschema: 5 Zonen (Sehr Hoch / Hoch / Normal / Niedrig / Kritisch Niedrig), nativer Farbpicker, Defaults nach klinischem Standard
-- Autostart-Checkbox: „Soll GlucoTray mit Windows starten?"
-- Intern wird immer in mmol/L gespeichert
+- Dropdowns zeigen Werte in gewählter Einheit an
+- Intern immer mmol-Werte, `handleNext` rechnet nach mg/dL um
+- Min: 2.8–4.5 mmol/L, Max: 8.0–13.0 mmol/L
+- 5 Farbzonen mit nativem Farbpicker
+- Autostart-Checkbox
 
 ### Step 5 – Completion
-- `onMount` → `invoke("save_wizard_data")` mit allen Wizard-Daten
-- Passwort wird nicht übergeben (liegt bereits im Keychain aus Step 3)
-- Threshold-Werte werden als Integer übergeben (mgdl: direkt, mmol: × 10)
-- Zusammenfassung: Sensor, Region, Username, Einheit, Min/Max, Autostart, Farbswatches
-- Fehleranzeige bei `save_wizard_data`-Fehler
-- Finish-Button → `handleFinish()` in `+page.svelte` (noch leer, Tray-Widget folgt)
-
-## i18n
-- System-Locale via `tauri-plugin-os` → Fallback `getLocaleFromNavigator()`
-- Sprachen: de, en, jp
-- `setupI18n()` ist async, wird in `+layout.svelte` per `{#await}` abgewartet
-- Land (für Telefon-Formatter) ist von Sprache entkoppelt – kommt separat aus OS-Locale
+- `onMount` → `invoke("save_wizard_data")` mit mg/dL Schwellwerten
+- Zusammenfassung, Fehleranzeige bei save-Fehler
+- Finish → `invoke("restart_app")`
 
 ## Wichtige Dateien
 | Datei | Zweck |
@@ -80,18 +102,22 @@
 | `src/lib/i18n/de.json` | Deutsche Übersetzungen |
 | `src/lib/i18n/en.json` | Englische Übersetzungen |
 | `src/lib/i18n/jp.json` | Japanische Übersetzungen |
-| `src-tauri/src/lib.rs` | Tauri Commands |
+| `src-tauri/src/lib.rs` | Tauri Commands, App-Setup |
+| `src-tauri/src/state.rs` | AppState Struct |
+| `src-tauri/src/tray.rs` | Tray-Icon, Farblogik, Menü |
 | `src-tauri/src/dexcom.rs` | Dexcom Share API |
-| `src-tauri/src/db.rs` | SQLite Init + Queries |
-| `src-tauri/src/worker.rs` | Polling Worker |
+| `src-tauri/src/db.rs` | SQLite Init, Queries, Umrechnung |
+| `src-tauri/src/worker.rs` | Polling Worker, Tray-Update |
 | `src-tauri/src/keychain.rs` | OS Keychain Integration |
 | `src-tauri/src/error.rs` | Logger Init |
+| `src-tauri/assets/fonts/NotoSans-Bold.ttf` | Font für Tray-Rendering |
 
 ## Tauri Commands
 | Command | Zweck |
 |---|---|
 | `validate_credentials` | Dexcom Auth + Passwort in Keychain speichern |
 | `save_wizard_data` | Alle Settings in SQLite schreiben |
+| `restart_app` | App-Neustart |
 
 ## Workflows
 | Workflow | Trigger |
@@ -103,11 +129,15 @@
 | `create-issue.yml` | Push mit Änderung an `docs/issues.md` |
 
 ## Offene Punkte
-- `handleFinish()` in `+page.svelte` implementieren (Fenster schließen / Tray aktiv)
-- Tray-Icon mit Live-Wert implementieren
-- Trend-Pfeil
-- Farbschema-Logik im Tray anwenden
-- Einheit-Toggle mg/dL / mmol/L im Tray
-- Autostart-Implementierung (Windows + Linux)
-- Fehlerbehandlung im Worker (No readings, Timeout, Rate limit)
+- Fehlerbehandlung Worker (No readings, Timeout, Rate limit)
+- Settings-Fenster (Einheit, Schwellwerte, Farben, Autostart, Credentials ändern, Nutzungsbedingungen)
+- Einheit-Änderung → Neustart-Hinweis im Settings-Fenster
 - Wizard flow end-to-end auf echter Maschine testen
+- Vor erstem Public Release: Azure AD + Store Submission, Flathub Bot, In-App Updater
+
+## Hinweise für nächste Session
+- Settings-Fenster ist ein neues Tauri-Fenster (Linksklick auf Tray öffnet es)
+- Einheiten-Änderung erfordert App-Neustart wegen AppState
+- `get_latest_reading` in db.rs noch unused – wird im Settings-Fenster gebraucht
+- `delete_credentials` in keychain.rs – wird beim Credentials-Ändern gebraucht
+- `MMOL_TO_MGDL` Konstante in lib.rs noch unused – prüfen ob noch nötig

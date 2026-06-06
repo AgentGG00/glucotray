@@ -22,12 +22,15 @@
 - [x] SQLite database setup
 - [x] Polling logic (150s interval)
 - [x] Error handling
+- [x] Autostart (Windows + Linux via tauri-plugin-autostart)
+- [x] mg/dL als interne Einheit, einmalige Umrechnung in db.rs
+- [x] AppState mit unit-Setting
 
 ### Frontend
-- [ ] Tray icon with live value
-- [ ] Trend arrow display
-- [ ] Color scheme logic
-- [ ] Unit toggle (mg/dL / mmol/L)
+- [x] Tray icon with live value
+- [x] Trend arrow display (Unicode)
+- [x] Color scheme logic (zone-based, klinisch korrekt)
+- [ ] Unit toggle (mg/dL / mmol/L) im Settings-Fenster
 
 ### Features
 #### feat: Wizard
@@ -37,12 +40,23 @@
 - [x] Live API validation
 - [x] Settings screen (unit, thresholds, color scheme, autostart)
 - [x] Completion screen
+- [x] App-Neustart nach Wizard-Abschluss
+
+#### feat: Tray
+- [x] Dynamisches Tray-Icon mit Live-Wert
+- [x] Trendpfeil (Unicode)
+- [x] Farbschema-Logik (5 Zonen)
+- [x] Kontextmenü (GlucoTray / Update check / Quit / Restart)
+- [x] Erster-Start-Notification (Tray pinnen)
+- [x] Update-Badge vorbereitet
+- [ ] Update check Logik (vor erstem Public Release)
 
 #### feat: Settings
 - [x] Autostart toggle
 - [x] Unit selection
 - [x] Threshold configuration
 - [x] Color scheme configuration
+- [ ] Settings-Fenster (noch zu bauen)
 
 #### feat: Error Handling
 - [ ] Invalid credentials
