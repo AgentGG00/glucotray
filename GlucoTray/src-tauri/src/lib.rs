@@ -89,6 +89,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .manage(std::sync::Mutex::new(TrayState { update_available: false }))
         .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string() }))
         .invoke_handler(tauri::generate_handler![
@@ -126,10 +130,25 @@ pub fn run() {
                         .unwrap_or(None)
                         .unwrap_or_else(|| "mgdl".to_string());
 
+                    let autostart = get_setting(&pool, "autostart").await
+                        .unwrap_or(None)
+                        .map(|v| v == "true")
+                        .unwrap_or(false);
+
                     {
                         let state = app_handle.state::<std::sync::Mutex<AppState>>();
                         let mut s = state.lock().unwrap();
                         s.unit = unit;
+                    }
+
+                    {
+                        use tauri_plugin_autostart::ManagerExt;
+                        let autostart_manager = app_handle.autolaunch();
+                        if autostart {
+                            let _ = autostart_manager.enable();
+                        } else {
+                            let _ = autostart_manager.disable();
+                        }
                     }
 
                     if let (Some(username), Some(region_str)) = (username, region_str) {
