@@ -6,7 +6,6 @@
     import WizardStep4 from "$lib/components/WizardStep4.svelte";
     import WizardStep5 from "$lib/components/WizardStep5.svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import { getCurrentWindow } from "@tauri-apps/api/window";
 
     let step = $state(1);
     let authError = $state("");
@@ -72,8 +71,7 @@
     }
 
     async function handleFinish() {
-        await invoke("start_worker");
-        await getCurrentWindow().close();
+        await invoke("restart_app");
     }
 
     function handleCancel() {

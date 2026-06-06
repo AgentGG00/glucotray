@@ -1,0 +1,162 @@
+use tauri::{
+    AppHandle, Manager,
+    image::Image,
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+};
+use image::{ImageBuffer, Rgba};
+use imageproc::drawing::draw_text_mut;
+use ab_glyph::{FontRef, PxScale};
+
+const ICON_SIZE: u32 = 32;
+
+pub struct TrayState {
+    pub update_available: bool,
+}
+
+fn trend_symbol(trend: &str) -> &str {
+    match trend {
+        "DoubleUp"      => "^^",
+        "SingleUp"      => "^",
+        "FortyFiveUp"   => "/^",
+        "Flat"          => "->",
+        "FortyFiveDown" => "\\v",
+        "SingleDown"    => "v",
+        "DoubleDown"    => "vv",
+        _               => "?",
+    }
+}
+
+fn hex_to_rgba(hex: &str) -> Rgba<u8> {
+    let hex = hex.trim_start_matches('#');
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
+    Rgba([r, g, b, 255])
+}
+
+pub fn render_icon(value: i32, trend: &str, color_hex: &str, update_available: bool) -> Vec<u8> {
+    let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
+        ImageBuffer::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
+
+    let bg_color = hex_to_rgba(color_hex);
+    for pixel in img.pixels_mut() {
+        *pixel = bg_color;
+    }
+
+    let font_data = include_bytes!("../assets/fonts/NotoSans-Bold.ttf");
+    let font = FontRef::try_from_slice(font_data).unwrap();
+    let scale = PxScale::from(11.0);
+
+    let label = if value == 0 {
+        "N/A".to_string()
+    } else {
+        format!("{}", value)
+    };
+
+    draw_text_mut(&mut img, Rgba([255, 255, 255, 255]), 2, 2, scale, &font, &label);
+
+    let trend_sym = trend_symbol(trend);
+    draw_text_mut(&mut img, Rgba([255, 255, 255, 255]), 2, 16, scale, &font, trend_sym);
+
+    if update_available {
+        for x in 24..32u32 {
+            for y in 0..8u32 {
+                img.put_pixel(x, y, Rgba([220, 38, 38, 255]));
+            }
+        }
+    }
+
+    let mut png_bytes: Vec<u8> = Vec::new();
+    img.write_to(
+        &mut std::io::Cursor::new(&mut png_bytes),
+        image::ImageFormat::Png,
+    ).unwrap();
+
+    png_bytes
+}
+
+pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu<tauri::Wry>> {
+    let title = MenuItem::with_id(app, "title", "GlucoTray", false, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let update_label = if update_available { "Update 🔴" } else { "Update check" };
+    let update = MenuItem::with_id(app, "update", update_label, true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
+
+    Menu::with_items(app, &[&title, &separator, &update, &separator, &quit, &restart])
+}
+
+pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+    let png_bytes = render_icon(0, "Flat", "#6B7280", false);
+    let icon = Image::from_bytes(&png_bytes)?;
+    let menu = build_menu(app, false)?;
+
+    let _tray = TrayIconBuilder::with_id("main")
+        .icon(icon)
+        .menu(&menu)
+        .tooltip("GlucoTray")
+        .on_menu_event({
+            let app = app.clone();
+            move |_tray, event| {
+                match event.id.as_ref() {
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    "restart" => {
+                        app.restart();
+                    }
+                    "update" => {
+                        let state = app.state::<std::sync::Mutex<TrayState>>();
+                        let update_available = state.lock().unwrap().update_available;
+                        if update_available {
+                            let _ = open::that("https://github.com/AgentGG00/glucotray/releases/latest");
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .on_tray_icon_event({
+            let app = app.clone();
+            move |_tray, event| {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+pub fn update_tray(app: &AppHandle, value: i32, trend: &str, color_hex: &str) {
+    let state = app.state::<std::sync::Mutex<TrayState>>();
+    let update_available = state.lock().unwrap().update_available;
+
+    let png_bytes = render_icon(value, trend, color_hex, update_available);
+
+    if let Ok(icon) = Image::from_bytes(&png_bytes) {
+        if let Some(tray) = app.tray_by_id("main") {
+            let _ = tray.set_icon(Some(icon));
+        }
+    }
+
+    let display = if value == 0 {
+        "GlucoTray – N/A".to_string()
+    } else {
+        format!("GlucoTray – {} {}", value, trend_symbol(trend))
+    };
+
+    if let Some(tray) = app.tray_by_id("main") {
+        let _ = tray.set_tooltip(Some(&display));
+    }
+}

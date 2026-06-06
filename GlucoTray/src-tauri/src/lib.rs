@@ -3,6 +3,7 @@ mod db;
 mod worker;
 mod keychain;
 mod error;
+mod tray;
 
 use db::init_db;
 use error::init_logger;
@@ -10,6 +11,7 @@ use keychain::{get_password, save_credentials};
 use db::{get_setting, set_setting};
 use dexcom::{Region, DexcomClient};
 use tauri::Manager;
+use tray::TrayState;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -26,7 +28,6 @@ async fn validate_credentials(username: String, password: String, region: String
 
     let mut client = DexcomClient::new(r);
     client.authenticate(&username, &password).await?;
-
     save_credentials(&username, &password).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -48,9 +49,7 @@ async fn save_wizard_data(
     color_high: String,
     color_very_high: String,
 ) -> Result<(), String> {
-    let db_path = app
-        .path()
-        .app_data_dir()
+    let db_path = app.path().app_data_dir()
         .map_err(|e| e.to_string())?
         .join("glucotray.db");
 
@@ -69,42 +68,14 @@ async fn save_wizard_data(
     set_setting(&pool, "color_normal",       &color_normal).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "wizard_done",        "true").await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn start_worker(app: tauri::AppHandle) -> Result<(), String> {
-    let db_path = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("glucotray.db");
-
-    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
-    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
-
-    let username = get_setting(&pool, "username").await
-        .map_err(|e| e.to_string())?
-        .ok_or("No username in DB")?;
-
-    let region_str = get_setting(&pool, "region").await
-        .map_err(|e| e.to_string())?
-        .ok_or("No region in DB")?;
-
-    let password = get_password(&username).map_err(|e| e.to_string())?;
-
-    let region = match region_str.as_str() {
-        "ous" => Region::Ous,
-        "jp"  => Region::Jp,
-        _     => Region::Us,
-    };
-
-    tauri::async_runtime::spawn(async move {
-        worker::start_worker(pool, username, password, region).await;
-    });
-
-    Ok(())
+async fn restart_app(app: tauri::AppHandle) {
+    app.restart();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -112,37 +83,71 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![greet, validate_credentials, save_wizard_data, start_worker])
+        .plugin(tauri_plugin_notification::init())
+        .manage(std::sync::Mutex::new(TrayState { update_available: false }))
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            validate_credentials,
+            save_wizard_data,
+            restart_app,
+        ])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
                 .expect("Failed to get log dir");
             init_logger(log_dir.to_str().unwrap());
 
+            tray::setup_tray(app.handle())?;
+
             let db_path = app.path().app_data_dir()
                 .expect("Failed to get app data dir")
                 .join("glucotray.db");
-
             let db_path_str = db_path.to_str().unwrap().to_string();
+            let app_handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {
                 let pool = init_db(&db_path_str).await
                     .expect("Failed to initialize database");
 
-                let username = get_setting(&pool, "username").await
-                    .unwrap_or(None);
-                let region_str = get_setting(&pool, "region").await
-                    .unwrap_or(None);
+                let wizard_done = get_setting(&pool, "wizard_done").await
+                    .unwrap_or(None)
+                    .map(|v| v == "true")
+                    .unwrap_or(false);
 
-                if let (Some(username), Some(region_str)) = (username, region_str) {
-                    let password = get_password(&username).unwrap_or_default();
+                if wizard_done {
+                    let username = get_setting(&pool, "username").await
+                        .unwrap_or(None);
+                    let region_str = get_setting(&pool, "region").await
+                        .unwrap_or(None);
 
-                    let region = match region_str.as_str() {
-                        "ous" => Region::Ous,
-                        "jp"  => Region::Jp,
-                        _     => Region::Us,
-                    };
+                    if let (Some(username), Some(region_str)) = (username, region_str) {
+                        let password = get_password(&username).unwrap_or_default();
 
-                    worker::start_worker(pool, username, password, region).await;
+                        let region = match region_str.as_str() {
+                            "ous" => Region::Ous,
+                            "jp"  => Region::Jp,
+                            _     => Region::Us,
+                        };
+
+                        let first_start = get_setting(&pool, "tray_hint_shown").await
+                            .unwrap_or(None)
+                            .is_none();
+
+                        if first_start {
+                            let _ = set_setting(&pool, "tray_hint_shown", "true").await;
+                            tauri_plugin_notification::NotificationExt::notification(&app_handle)
+                                .builder()
+                                .title("GlucoTray läuft")
+                                .body("Damit der Blutzuckerwert immer sichtbar ist, pinne das Icon in der Taskleiste.")
+                                .show()
+                                .ok();
+                        }
+
+                        worker::start_worker(app_handle, pool, username, password, region).await;
+                    }
+                } else {
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.show();
+                    }
                 }
             });
 
