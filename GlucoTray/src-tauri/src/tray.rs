@@ -7,11 +7,11 @@ use tauri::{
 use image::{ImageBuffer, Rgba};
 use imageproc::drawing::draw_text_mut;
 use ab_glyph::{FontRef, PxScale};
+use crate::db::mgdl_to_mmol;
 
 const ICON_SIZE: u32 = 32;
-
-const VERY_HIGH_THRESHOLD: i32 = 139;
-const CRITICAL_LOW_THRESHOLD: i32 = 30;
+const VERY_HIGH_MGDL: i32 = 250;
+const CRITICAL_LOW_MGDL: i32 = 54;
 const COLOR_NO_DATA: &str = "#6B7280";
 
 pub struct TrayState {
@@ -26,20 +26,20 @@ pub struct ColorScheme {
     pub very_high:    String,
 }
 
-pub fn resolve_color(value: i32, trend: &str, threshold_low: i32, threshold_high: i32, colors: &ColorScheme) -> String {
-    if value <= 0 {
+pub fn resolve_color(value_mgdl: i32, trend: &str, threshold_low: i32, threshold_high: i32, colors: &ColorScheme) -> String {
+    if value_mgdl <= 0 {
         return COLOR_NO_DATA.to_string();
     }
-    if trend == "Low" || value < CRITICAL_LOW_THRESHOLD {
+    if trend == "Low" || value_mgdl < CRITICAL_LOW_MGDL {
         return colors.critical_low.clone();
     }
-    if value < threshold_low {
+    if value_mgdl < threshold_low {
         return colors.low.clone();
     }
-    if value > VERY_HIGH_THRESHOLD {
+    if value_mgdl > VERY_HIGH_MGDL {
         return colors.very_high.clone();
     }
-    if value > threshold_high {
+    if value_mgdl > threshold_high {
         return colors.high.clone();
     }
     colors.normal.clone()
@@ -67,7 +67,7 @@ fn hex_to_rgba(hex: &str) -> Rgba<u8> {
     Rgba([r, g, b, 255])
 }
 
-pub fn render_icon(value: i32, trend: &str, bg_hex: &str, update_available: bool) -> Vec<u8> {
+pub fn render_icon(value_mgdl: i32, trend: &str, bg_hex: &str, unit: &str, update_available: bool) -> Vec<u8> {
     let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
         ImageBuffer::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
 
@@ -81,10 +81,14 @@ pub fn render_icon(value: i32, trend: &str, bg_hex: &str, update_available: bool
     let scale = PxScale::from(11.0);
     let text_color = Rgba([255, 255, 255, 255]);
 
-    if value <= 0 {
+    if value_mgdl <= 0 {
         draw_text_mut(&mut img, text_color, 4, 10, scale, &font, "N/A");
     } else {
-        let label = format!("{:.1}", value as f32 / 10.0);
+        let label = if unit == "mmol" {
+            format!("{:.1}", mgdl_to_mmol(value_mgdl))
+        } else {
+            format!("{}", value_mgdl)
+        };
         draw_text_mut(&mut img, text_color, 2, 2, scale, &font, &label);
 
         let sym = trend_symbol(trend);
@@ -113,7 +117,7 @@ pub fn render_icon(value: i32, trend: &str, bg_hex: &str, update_available: bool
 pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu<tauri::Wry>> {
     let title = MenuItem::with_id(app, "title", "GlucoTray", false, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let update_label = if update_available { "Update 🔴" } else { "Update check" };
+    let update_label = if update_available { "Update ..." } else { "Update check" };
     let update = MenuItem::with_id(app, "update", update_label, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
@@ -122,7 +126,7 @@ pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu
 }
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let png_bytes = render_icon(0, "Flat", COLOR_NO_DATA, false);
+    let png_bytes = render_icon(0, "Flat", COLOR_NO_DATA, "mgdl", false);
     let icon = Image::from_bytes(&png_bytes)?;
     let menu = build_menu(app, false)?;
 
@@ -134,13 +138,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             let app = app.clone();
             move |_tray, event| {
                 match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    "restart" => {
-                        app.restart();
-                    }
-                    "update" => {
+                    "quit"    => { app.exit(0); }
+                    "restart" => { app.restart(); }
+                    "update"  => {
                         let state = app.state::<std::sync::Mutex<TrayState>>();
                         let update_available = state.lock().unwrap().update_available;
                         if update_available {
@@ -172,11 +172,16 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn update_tray(app: &AppHandle, value: i32, trend: &str, bg_hex: &str) {
+pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, bg_hex: &str) {
     let state = app.state::<std::sync::Mutex<TrayState>>();
     let update_available = state.lock().unwrap().update_available;
 
-    let png_bytes = render_icon(value, trend, bg_hex, update_available);
+    let unit = {
+        // unit-Setting aus AppState lesen – Fallback mgdl
+        "mgdl"
+    };
+
+    let png_bytes = render_icon(value_mgdl, trend, bg_hex, unit, update_available);
 
     if let Ok(icon) = Image::from_bytes(&png_bytes) {
         if let Some(tray) = app.tray_by_id("main") {
@@ -184,11 +189,11 @@ pub fn update_tray(app: &AppHandle, value: i32, trend: &str, bg_hex: &str) {
         }
     }
 
-    let tooltip = if value <= 0 {
+    let tooltip = if value_mgdl <= 0 {
         "GlucoTray – N/A".to_string()
     } else {
-        let mmol = value as f32 / 10.0;
-        format!("GlucoTray – {:.1} mmol/L {}", mmol, trend_symbol(trend))
+        let mmol = mgdl_to_mmol(value_mgdl);
+        format!("GlucoTray – {} mg/dL / {:.1} mmol/L {}", value_mgdl, mmol, trend_symbol(trend))
     };
 
     if let Some(tray) = app.tray_by_id("main") {

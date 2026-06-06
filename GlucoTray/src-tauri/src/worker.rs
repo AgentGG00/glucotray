@@ -37,12 +37,12 @@ pub async fn start_worker(
         let threshold_low: i32 = get_setting(&pool, "threshold_low").await
             .unwrap_or(None)
             .and_then(|v| v.parse().ok())
-            .unwrap_or(39);
+            .unwrap_or(70);
 
         let threshold_high: i32 = get_setting(&pool, "threshold_high").await
             .unwrap_or(None)
             .and_then(|v| v.parse().ok())
-            .unwrap_or(100);
+            .unwrap_or(180);
 
         let colors = load_color_scheme(&pool).await;
 
@@ -52,24 +52,19 @@ pub async fn start_worker(
                     failure_count = 0;
                     na_written = false;
 
+                    let value_mgdl = reading.value as i32;
+
                     let _ = insert_reading(
                         &pool,
-                        reading.value as i32,
+                        value_mgdl,
                         &reading.trend,
                         &reading.timestamp,
                         true,
                     )
                     .await;
 
-                    let color = resolve_color(
-                        reading.value as i32,
-                        &reading.trend,
-                        threshold_low,
-                        threshold_high,
-                        &colors,
-                    );
-
-                    update_tray(&app, reading.value as i32, &reading.trend, &color);
+                    let color = resolve_color(value_mgdl, &reading.trend, threshold_low, threshold_high, &colors);
+                    update_tray(&app, value_mgdl, &reading.trend, &color);
                 }
             }
             Err(_) => {

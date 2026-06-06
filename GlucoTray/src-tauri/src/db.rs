@@ -1,5 +1,11 @@
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
+const MGDL_TO_MMOL: f32 = 18.0182;
+
+pub fn mgdl_to_mmol(mgdl: i32) -> f32 {
+    (mgdl as f32 / MGDL_TO_MMOL * 10.0).round() / 10.0
+}
+
 pub async fn init_db(db_path: &str) -> Result<SqlitePool, sqlx::Error> {
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -9,7 +15,8 @@ pub async fn init_db(db_path: &str) -> Result<SqlitePool, sqlx::Error> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS readings (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            value       INTEGER NOT NULL,
+            value_mgdl  INTEGER NOT NULL,
+            value_mmol  REAL NOT NULL,
             trend       TEXT NOT NULL,
             timestamp   TEXT NOT NULL,
             is_valid    INTEGER NOT NULL DEFAULT 1,
@@ -33,16 +40,19 @@ pub async fn init_db(db_path: &str) -> Result<SqlitePool, sqlx::Error> {
 
 pub async fn insert_reading(
     pool: &SqlitePool,
-    value: i32,
+    value_mgdl: i32,
     trend: &str,
     timestamp: &str,
     is_valid: bool,
 ) -> Result<(), sqlx::Error> {
+    let value_mmol = mgdl_to_mmol(value_mgdl);
+
     sqlx::query(
-        "INSERT INTO readings (value, trend, timestamp, is_valid)
-         VALUES (?, ?, ?, ?)"
+        "INSERT INTO readings (value_mgdl, value_mmol, trend, timestamp, is_valid)
+         VALUES (?, ?, ?, ?, ?)"
     )
-    .bind(value)
+    .bind(value_mgdl)
+    .bind(value_mmol)
     .bind(trend)
     .bind(timestamp)
     .bind(is_valid as i32)
@@ -61,15 +71,15 @@ pub async fn insert_reading(
 
 pub async fn get_latest_reading(
     pool: &SqlitePool,
-) -> Result<Option<(i32, String, bool)>, sqlx::Error> {
-    let row = sqlx::query_as::<_, (i32, String, i32)>(
-        "SELECT value, trend, is_valid FROM readings
+) -> Result<Option<(i32, f32, String, bool)>, sqlx::Error> {
+    let row = sqlx::query_as::<_, (i32, f32, String, i32)>(
+        "SELECT value_mgdl, value_mmol, trend, is_valid FROM readings
          ORDER BY created_at DESC LIMIT 1"
     )
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|(value, trend, is_valid)| (value, trend, is_valid != 0)))
+    Ok(row.map(|(mgdl, mmol, trend, is_valid)| (mgdl, mmol, trend, is_valid != 0)))
 }
 
 pub async fn set_setting(

@@ -4,10 +4,10 @@
     import "$lib/styles/wizard.css";
     import { onMount } from "svelte";
 
-    const MMOL_TO_MGDL = 18.0182;
+    const MGDL_TO_MMOL = 18.0182;
 
-    function mmolToMgdl(val: number): number {
-        return Math.round(val * MMOL_TO_MGDL);
+    function mgdlToMmol(val: number): string {
+        return (val / MGDL_TO_MMOL).toFixed(1);
     }
 
     let {
@@ -15,8 +15,8 @@
         region,
         username,
         unit,
-        minMmol,
-        maxMmol,
+        thresholdLowMgdl,
+        thresholdHighMgdl,
         autostart,
         colors,
         onBack,
@@ -26,8 +26,8 @@
         region: string;
         username: string;
         unit: "mmol" | "mgdl";
-        minMmol: number;
-        maxMmol: number;
+        thresholdLowMgdl: number;
+        thresholdHighMgdl: number;
         autostart: boolean;
         colors: {
             criticalLow: string;
@@ -48,13 +48,13 @@
     }
 
     function formatMin(): string {
-        if (unit === "mgdl") return `${mmolToMgdl(minMmol)} mg/dL`;
-        return `${minMmol.toFixed(1)} mmol/L`;
+        if (unit === "mgdl") return `${thresholdLowMgdl} mg/dL`;
+        return `${mgdlToMmol(thresholdLowMgdl)} mmol/L`;
     }
 
     function formatMax(): string {
-        if (unit === "mgdl") return `${mmolToMgdl(maxMmol)} mg/dL`;
-        return `${maxMmol.toFixed(1)} mmol/L`;
+        if (unit === "mgdl") return `${thresholdHighMgdl} mg/dL`;
+        return `${mgdlToMmol(thresholdHighMgdl)} mmol/L`;
     }
 
     function regionLabel(r: string): string {
@@ -76,8 +76,8 @@
                 region,
                 sensor,
                 unit,
-                thresholdLow:     unit === "mgdl" ? mmolToMgdl(minMmol) : Math.round(minMmol * 10),
-                thresholdHigh:    unit === "mgdl" ? mmolToMgdl(maxMmol) : Math.round(maxMmol * 10),
+                thresholdLowMgdl,
+                thresholdHighMgdl,
                 autostart,
                 colorCriticalLow: colors.criticalLow,
                 colorLow:         colors.low,
@@ -92,86 +92,3 @@
         }
     });
 </script>
-
-<div class="wizard-screen">
-    <button class="flag-btn" onclick={() => cycleLanguage($locale ?? "en", locale.set)}>
-        {flags[$locale ?? "en"]}
-    </button>
-
-    <div class="section">
-        <h2>{$_("wizard.completion.title")}</h2>
-        <p class="hint-text">{$_("wizard.completion.subtitle")}</p>
-    </div>
-
-    <!-- Zusammenfassung -->
-    <div class="section">
-        <div class="summary-grid">
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_sensor")}</span>
-                <span class="summary-value">{sensor.toUpperCase()}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_region")}</span>
-                <span class="summary-value">{regionLabel(region)}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_username")}</span>
-                <span class="summary-value">{username}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_unit")}</span>
-                <span class="summary-value">{formatUnit(unit)}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_threshold_low")}</span>
-                <span class="summary-value">{formatMin()}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_threshold_high")}</span>
-                <span class="summary-value">{formatMax()}</span>
-            </div>
-
-            <div class="summary-row">
-                <span class="summary-label">{$_("wizard.completion.summary_autostart")}</span>
-                <span class="summary-value">
-                    {autostart ? $_("wizard.completion.autostart_on") : $_("wizard.completion.autostart_off")}
-                </span>
-            </div>
-
-            <div class="summary-row summary-row-colors">
-                <span class="summary-label">{$_("wizard.completion.summary_colors")}</span>
-                <div class="summary-color-row">
-                    <div class="summary-swatch" style="background-color: {colors.veryHigh}" title={$_("wizard.settings.zone_very_high")}></div>
-                    <div class="summary-swatch" style="background-color: {colors.high}" title={$_("wizard.settings.zone_high")}></div>
-                    <div class="summary-swatch" style="background-color: {colors.normal}" title={$_("wizard.settings.zone_normal")}></div>
-                    <div class="summary-swatch" style="background-color: {colors.low}" title={$_("wizard.settings.zone_low")}></div>
-                    <div class="summary-swatch" style="background-color: {colors.criticalLow}" title={$_("wizard.settings.zone_critical_low")}></div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    {#if isSaving}
-        <p class="hint-text">{$_("wizard.completion.saving")}</p>
-    {/if}
-
-    {#if saveError}
-        <p class="error-text">{$_("wizard.completion.error")}: {saveError}</p>
-    {/if}
-
-    <div class="actions">
-        <button class="btn-back" onclick={onBack} disabled={isSaving}>
-            {$_("wizard.buttons.back")}
-        </button>
-        <button class="btn-submit" disabled={isSaving || !!saveError} onclick={onFinish}>
-            {$_("wizard.completion.finish")}
-        </button>
-    </div>
-</div>

@@ -15,8 +15,8 @@
         username: "",
         password: "",
         unit: "" as "mmol" | "mgdl" | "",
-        minMmol: 0,
-        maxMmol: 0,
+        thresholdLowMgdl: 0,
+        thresholdHighMgdl: 0,
         autostart: false,
         colors: {
             criticalLow: "#C62828",
@@ -40,9 +40,7 @@
         step = 3;
     }
 
-    function handleStep3Success() {
-        step = 4;
-    }
+    function handleStep3Success() { step = 4; }
 
     function handleStep3Fail(error: string) {
         authError = error;
@@ -51,8 +49,8 @@
 
     function handleStep4(data: {
         unit: "mmol" | "mgdl";
-        minMmol: number;
-        maxMmol: number;
+        thresholdLowMgdl: number;
+        thresholdHighMgdl: number;
         autostart: boolean;
         colors: {
             criticalLow: string;
@@ -63,8 +61,8 @@
         };
     }) {
         wizardData.unit = data.unit;
-        wizardData.minMmol = data.minMmol;
-        wizardData.maxMmol = data.maxMmol;
+        wizardData.thresholdLowMgdl = data.thresholdLowMgdl;
+        wizardData.thresholdHighMgdl = data.thresholdHighMgdl;
         wizardData.autostart = data.autostart;
         wizardData.colors = data.colors;
         step = 5;
@@ -83,8 +81,8 @@
             username: "",
             password: "",
             unit: "",
-            minMmol: 0,
-            maxMmol: 0,
+            thresholdLowMgdl: 0,
+            thresholdHighMgdl: 0,
             autostart: false,
             colors: {
                 criticalLow: "#C62828",
@@ -128,8 +126,8 @@
             region={wizardData.region}
             username={wizardData.username}
             unit={wizardData.unit as "mmol" | "mgdl"}
-            minMmol={wizardData.minMmol}
-            maxMmol={wizardData.maxMmol}
+            thresholdLowMgdl={wizardData.thresholdLowMgdl}
+            thresholdHighMgdl={wizardData.thresholdHighMgdl}
             autostart={wizardData.autostart}
             colors={wizardData.colors}
             onBack={() => step = 4}

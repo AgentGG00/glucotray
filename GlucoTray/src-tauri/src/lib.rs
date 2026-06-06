@@ -5,13 +5,19 @@ mod keychain;
 mod error;
 mod tray;
 
-use db::init_db;
+use db::{init_db, mgdl_to_mmol};
 use error::init_logger;
 use keychain::{get_password, save_credentials};
 use db::{get_setting, set_setting};
 use dexcom::{Region, DexcomClient};
 use tauri::Manager;
 use tray::TrayState;
+
+const MMOL_TO_MGDL: f32 = 18.0182;
+
+fn mmol_to_mgdl(mmol: f32) -> i32 {
+    (mmol * MMOL_TO_MGDL).round() as i32
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -40,8 +46,8 @@ async fn save_wizard_data(
     region: String,
     sensor: String,
     unit: String,
-    threshold_low: i32,
-    threshold_high: i32,
+    threshold_low_mgdl: i32,
+    threshold_high_mgdl: i32,
     autostart: bool,
     color_critical_low: String,
     color_low: String,
@@ -60,8 +66,8 @@ async fn save_wizard_data(
     set_setting(&pool, "region",             &region).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "sensor",             &sensor).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "unit",               &unit).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "threshold_low",      &threshold_low.to_string()).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "threshold_high",     &threshold_high.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_low",      &threshold_low_mgdl.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_high",     &threshold_high_mgdl.to_string()).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "autostart",          &autostart.to_string()).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_critical_low", &color_critical_low).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_low",          &color_low).await.map_err(|e| e.to_string())?;
@@ -114,10 +120,8 @@ pub fn run() {
                     .unwrap_or(false);
 
                 if wizard_done {
-                    let username = get_setting(&pool, "username").await
-                        .unwrap_or(None);
-                    let region_str = get_setting(&pool, "region").await
-                        .unwrap_or(None);
+                    let username = get_setting(&pool, "username").await.unwrap_or(None);
+                    let region_str = get_setting(&pool, "region").await.unwrap_or(None);
 
                     if let (Some(username), Some(region_str)) = (username, region_str) {
                         let password = get_password(&username).unwrap_or_default();

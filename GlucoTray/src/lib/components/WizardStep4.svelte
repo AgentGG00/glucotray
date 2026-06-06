@@ -3,13 +3,12 @@
     import { cycleLanguage, flags } from "$lib/app";
     import "$lib/styles/wizard.css";
 
-    // --- Typen ---
     type Unit = "mmol" | "mgdl";
 
     interface Settings {
         unit: Unit;
-        minMmol: number;
-        maxMmol: number;
+        thresholdLowMgdl: number;
+        thresholdHighMgdl: number;
         autostart: boolean;
         colors: {
             criticalLow: string;
@@ -25,7 +24,12 @@
         onBack: () => void;
     } = $props();
 
-    // --- Konstanten ---
+    const MMOL_TO_MGDL = 18.0182;
+
+    function mmolToMgdl(val: number): number {
+        return Math.round(val * MMOL_TO_MGDL);
+    }
+
     const MIN_VALUES_MMOL = [2.8, 3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5];
     const MAX_VALUES_MMOL = [
         8.0, 8.2, 8.5, 8.8,
@@ -36,18 +40,11 @@
         13.0
     ];
 
-    const MMOL_TO_MGDL = 18.0182;
-
-    function mmolToMgdl(val: number): number {
-        return Math.round(val * MMOL_TO_MGDL);
+    function formatValue(mmol: number, unit: Unit): string {
+        if (unit === "mgdl") return `${mmolToMgdl(mmol)} mg/dL`;
+        return `${mmol.toFixed(1)} mmol/L`;
     }
 
-    function formatValue(val: number, unit: Unit): string {
-        if (unit === "mgdl") return `${mmolToMgdl(val)} mg/dL`;
-        return `${val.toFixed(1)} mmol/L`;
-    }
-
-    // --- Defaults ---
     const DEFAULT_COLORS = {
         criticalLow: "#C62828",
         low:         "#EF6C00",
@@ -56,14 +53,12 @@
         veryHigh:    "#D84315",
     };
 
-    // --- State ---
     let unit      = $state<Unit | null>(null);
     let minMmol   = $state<number | null>(null);
     let maxMmol   = $state<number | null>(null);
     let autostart = $state(false);
     let colors    = $state({ ...DEFAULT_COLORS });
 
-    // --- Derived ---
     let dropdownsActive = $derived(unit !== null);
 
     let canProceed = $derived(
@@ -78,7 +73,6 @@
             : MAX_VALUES_MMOL
     );
 
-    // --- Handler ---
     function handleUnitChange(newUnit: Unit) {
         unit = newUnit;
     }
@@ -100,8 +94,8 @@
         if (!canProceed) return;
         onNext({
             unit: unit!,
-            minMmol: minMmol!,
-            maxMmol: maxMmol!,
+            thresholdLowMgdl:  mmolToMgdl(minMmol!),
+            thresholdHighMgdl: mmolToMgdl(maxMmol!),
             autostart,
             colors: { ...colors },
         });
@@ -113,43 +107,23 @@
         {flags[$locale ?? "en"]}
     </button>
 
-    <!-- Einheit -->
     <div class="section">
         <h2>{$_("wizard.settings.unit")}</h2>
         <div class="option-group">
             <label class="option" class:selected={unit === "mgdl"}>
-                <input
-                    type="radio"
-                    name="unit"
-                    value="mgdl"
-                    checked={unit === "mgdl"}
-                    onchange={() => handleUnitChange("mgdl")}
-                />
+                <input type="radio" name="unit" value="mgdl" checked={unit === "mgdl"} onchange={() => handleUnitChange("mgdl")} />
                 {$_("wizard.settings.unit_mgdl")}
             </label>
             <label class="option" class:selected={unit === "mmol"}>
-                <input
-                    type="radio"
-                    name="unit"
-                    value="mmol"
-                    checked={unit === "mmol"}
-                    onchange={() => handleUnitChange("mmol")}
-                />
+                <input type="radio" name="unit" value="mmol" checked={unit === "mmol"} onchange={() => handleUnitChange("mmol")} />
                 {$_("wizard.settings.unit_mmol")}
             </label>
         </div>
     </div>
 
-    <!-- Min-Grenzwert -->
     <div class="section">
         <h2>{$_("wizard.settings.threshold_low")}</h2>
-        <select
-            class="select-input"
-            class:select-disabled={!dropdownsActive}
-            disabled={!dropdownsActive}
-            value={minMmol ?? ""}
-            onchange={handleMinChange}
-        >
+        <select class="select-input" class:select-disabled={!dropdownsActive} disabled={!dropdownsActive} value={minMmol ?? ""} onchange={handleMinChange}>
             <option value="" disabled selected={minMmol === null}>
                 {dropdownsActive ? $_("wizard.settings.select_placeholder") : $_("wizard.settings.select_unit_first")}
             </option>
@@ -161,16 +135,9 @@
         </select>
     </div>
 
-    <!-- Max-Grenzwert -->
     <div class="section">
         <h2>{$_("wizard.settings.threshold_high")}</h2>
-        <select
-            class="select-input"
-            class:select-disabled={!dropdownsActive}
-            disabled={!dropdownsActive || minMmol === null}
-            value={maxMmol ?? ""}
-            onchange={handleMaxChange}
-        >
+        <select class="select-input" class:select-disabled={!dropdownsActive} disabled={!dropdownsActive || minMmol === null} value={maxMmol ?? ""} onchange={handleMaxChange}>
             <option value="" disabled selected={maxMmol === null}>
                 {dropdownsActive ? $_("wizard.settings.select_placeholder") : $_("wizard.settings.select_unit_first")}
             </option>
@@ -182,7 +149,6 @@
         </select>
     </div>
 
-    <!-- Farbschema -->
     <div class="section">
         <h2>{$_("wizard.settings.color_scheme")}</h2>
         <p class="hint-text">{$_("wizard.settings.color_hint")}</p>
@@ -230,20 +196,15 @@
         </div>
     </div>
 
-    <!-- Autostart -->
     <div class="section">
-        <label class="check-item">
+        <label class="option">
             <input type="checkbox" bind:checked={autostart} />
             {$_("wizard.settings.autostart_label")}
         </label>
     </div>
 
     <div class="actions">
-        <button class="btn-back" onclick={onBack}>
-            {$_("wizard.buttons.back")}
-        </button>
-        <button class="btn-next" disabled={!canProceed} onclick={handleNext}>
-            {$_("wizard.buttons.next")}
-        </button>
+        <button class="btn-back" onclick={onBack}>{$_("wizard.buttons.back")}</button>
+        <button class="btn-submit" disabled={!canProceed} onclick={handleNext}>{$_("wizard.buttons.next")}</button>
     </div>
 </div>
