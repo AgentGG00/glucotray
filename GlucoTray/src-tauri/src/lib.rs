@@ -4,8 +4,11 @@ mod worker;
 mod keychain;
 mod error;
 mod tray;
+mod state;
 
-use db::{init_db, mgdl_to_mmol};
+pub use state::AppState;
+
+use db::init_db;
 use error::init_logger;
 use keychain::{get_password, save_credentials};
 use db::{get_setting, set_setting};
@@ -14,10 +17,6 @@ use tauri::Manager;
 use tray::TrayState;
 
 const MMOL_TO_MGDL: f32 = 18.0182;
-
-fn mmol_to_mgdl(mmol: f32) -> i32 {
-    (mmol * MMOL_TO_MGDL).round() as i32
-}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -91,6 +90,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_notification::init())
         .manage(std::sync::Mutex::new(TrayState { update_available: false }))
+        .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string() }))
         .invoke_handler(tauri::generate_handler![
             greet,
             validate_credentials,
@@ -122,6 +122,15 @@ pub fn run() {
                 if wizard_done {
                     let username = get_setting(&pool, "username").await.unwrap_or(None);
                     let region_str = get_setting(&pool, "region").await.unwrap_or(None);
+                    let unit = get_setting(&pool, "unit").await
+                        .unwrap_or(None)
+                        .unwrap_or_else(|| "mgdl".to_string());
+
+                    {
+                        let state = app_handle.state::<std::sync::Mutex<AppState>>();
+                        let mut s = state.lock().unwrap();
+                        s.unit = unit;
+                    }
 
                     if let (Some(username), Some(region_str)) = (username, region_str) {
                         let password = get_password(&username).unwrap_or_default();

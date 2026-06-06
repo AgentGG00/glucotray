@@ -8,6 +8,7 @@ use image::{ImageBuffer, Rgba};
 use imageproc::drawing::draw_text_mut;
 use ab_glyph::{FontRef, PxScale};
 use crate::db::mgdl_to_mmol;
+use crate::state::AppState;
 
 const ICON_SIZE: u32 = 32;
 const VERY_HIGH_MGDL: i32 = 250;
@@ -47,13 +48,13 @@ pub fn resolve_color(value_mgdl: i32, trend: &str, threshold_low: i32, threshold
 
 fn trend_symbol(trend: &str) -> &str {
     match trend {
-        "DoubleUp"      => "^^",
-        "SingleUp"      => "^",
-        "FortyFiveUp"   => "/^",
-        "Flat"          => "->",
-        "FortyFiveDown" => "\\v",
-        "SingleDown"    => "v",
-        "DoubleDown"    => "vv",
+        "DoubleUp"      => "⇈",
+        "SingleUp"      => "↑",
+        "FortyFiveUp"   => "↗",
+        "Flat"          => "→",
+        "FortyFiveDown" => "↘",
+        "SingleDown"    => "↓",
+        "DoubleDown"    => "⇊",
         "Low"           => "",
         _               => "?",
     }
@@ -117,7 +118,7 @@ pub fn render_icon(value_mgdl: i32, trend: &str, bg_hex: &str, unit: &str, updat
 pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu<tauri::Wry>> {
     let title = MenuItem::with_id(app, "title", "GlucoTray", false, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let update_label = if update_available { "Update ..." } else { "Update check" };
+    let update_label = if update_available { "Update 🔴" } else { "Update check" };
     let update = MenuItem::with_id(app, "update", update_label, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
@@ -173,15 +174,19 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 }
 
 pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, bg_hex: &str) {
-    let state = app.state::<std::sync::Mutex<TrayState>>();
-    let update_available = state.lock().unwrap().update_available;
-
-    let unit = {
-        // unit-Setting aus AppState lesen – Fallback mgdl
-        "mgdl"
+    let update_available = {
+        let state = app.state::<std::sync::Mutex<TrayState>>();
+        let x = state.lock().unwrap().update_available;
+        x
     };
 
-    let png_bytes = render_icon(value_mgdl, trend, bg_hex, unit, update_available);
+    let unit = {
+        let app_state = app.state::<std::sync::Mutex<AppState>>();
+        let x = app_state.lock().unwrap().unit.clone();
+        x
+    };
+
+    let png_bytes = render_icon(value_mgdl, trend, bg_hex, &unit, update_available);
 
     if let Ok(icon) = Image::from_bytes(&png_bytes) {
         if let Some(tray) = app.tray_by_id("main") {
