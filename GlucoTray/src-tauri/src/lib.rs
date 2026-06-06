@@ -73,11 +73,46 @@ async fn save_wizard_data(
     Ok(())
 }
 
+#[tauri::command]
+async fn start_worker(app: tauri::AppHandle) -> Result<(), String> {
+    let db_path = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("glucotray.db");
+
+    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
+    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
+
+    let username = get_setting(&pool, "username").await
+        .map_err(|e| e.to_string())?
+        .ok_or("No username in DB")?;
+
+    let region_str = get_setting(&pool, "region").await
+        .map_err(|e| e.to_string())?
+        .ok_or("No region in DB")?;
+
+    let password = get_password(&username).map_err(|e| e.to_string())?;
+
+    let region = match region_str.as_str() {
+        "ous" => Region::Ous,
+        "jp"  => Region::Jp,
+        _     => Region::Us,
+    };
+
+    tauri::async_runtime::spawn(async move {
+        worker::start_worker(pool, username, password, region).await;
+    });
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, validate_credentials, save_wizard_data])
+        .plugin(tauri_plugin_os::init())
+        .invoke_handler(tauri::generate_handler![greet, validate_credentials, save_wizard_data, start_worker])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
                 .expect("Failed to get log dir");
@@ -113,7 +148,6 @@ pub fn run() {
 
             Ok(())
         })
-        .plugin(tauri_plugin_os::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

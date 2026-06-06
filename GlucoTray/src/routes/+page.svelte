@@ -5,6 +5,8 @@
     import WizardStep3 from "$lib/components/WizardStep3.svelte";
     import WizardStep4 from "$lib/components/WizardStep4.svelte";
     import WizardStep5 from "$lib/components/WizardStep5.svelte";
+    import { invoke } from "@tauri-apps/api/core";
+    import { getCurrentWindow } from "@tauri-apps/api/window";
 
     let step = $state(1);
     let authError = $state("");
@@ -69,9 +71,9 @@
         step = 5;
     }
 
-    function handleFinish() {
-        // Wizard abgeschlossen – Tray-Widget übernimmt
-        // Fenster schließen oder zu Hauptansicht wechseln
+    async function handleFinish() {
+        await invoke("start_worker");
+        await getCurrentWindow().close();
     }
 
     function handleCancel() {
