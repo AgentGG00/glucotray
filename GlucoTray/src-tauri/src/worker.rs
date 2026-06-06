@@ -3,16 +3,19 @@ use tokio::time::{sleep, Duration};
 use tauri::AppHandle;
 use crate::dexcom::{DexcomClient, Region};
 use crate::db::{insert_reading, get_setting};
-use crate::tray::update_tray;
+use crate::tray::{update_tray, resolve_color, ColorScheme};
 
 const POLL_INTERVAL_SECS: u64 = 150;
 const MAX_FAILURES: u8 = 8;
 
-fn color_for_value(value: i32, threshold_low: i32, threshold_high: i32) -> &'static str {
-    if value <= 0                    { "#6B7280" }
-    else if value < threshold_low    { "#C62828" }
-    else if value > threshold_high   { "#D84315" }
-    else                             { "#2E7D32" }
+async fn load_color_scheme(pool: &SqlitePool) -> ColorScheme {
+    ColorScheme {
+        critical_low: get_setting(pool, "color_critical_low").await.unwrap_or(None).unwrap_or_else(|| "#C62828".to_string()),
+        low:          get_setting(pool, "color_low").await.unwrap_or(None).unwrap_or_else(|| "#EF6C00".to_string()),
+        normal:       get_setting(pool, "color_normal").await.unwrap_or(None).unwrap_or_else(|| "#2E7D32".to_string()),
+        high:         get_setting(pool, "color_high").await.unwrap_or(None).unwrap_or_else(|| "#F9A825".to_string()),
+        very_high:    get_setting(pool, "color_very_high").await.unwrap_or(None).unwrap_or_else(|| "#D84315".to_string()),
+    }
 }
 
 pub async fn start_worker(
@@ -34,12 +37,14 @@ pub async fn start_worker(
         let threshold_low: i32 = get_setting(&pool, "threshold_low").await
             .unwrap_or(None)
             .and_then(|v| v.parse().ok())
-            .unwrap_or(70);
+            .unwrap_or(39);
 
         let threshold_high: i32 = get_setting(&pool, "threshold_high").await
             .unwrap_or(None)
             .and_then(|v| v.parse().ok())
-            .unwrap_or(180);
+            .unwrap_or(100);
+
+        let colors = load_color_scheme(&pool).await;
 
         match client.get_readings(&password).await {
             Ok(readings) => {
@@ -56,8 +61,15 @@ pub async fn start_worker(
                     )
                     .await;
 
-                    let color = color_for_value(reading.value as i32, threshold_low, threshold_high);
-                    update_tray(&app, reading.value as i32, &reading.trend, color);
+                    let color = resolve_color(
+                        reading.value as i32,
+                        &reading.trend,
+                        threshold_low,
+                        threshold_high,
+                        &colors,
+                    );
+
+                    update_tray(&app, reading.value as i32, &reading.trend, &color);
                 }
             }
             Err(_) => {

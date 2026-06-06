@@ -10,8 +10,39 @@ use ab_glyph::{FontRef, PxScale};
 
 const ICON_SIZE: u32 = 32;
 
+const VERY_HIGH_THRESHOLD: i32 = 139;
+const CRITICAL_LOW_THRESHOLD: i32 = 30;
+const COLOR_NO_DATA: &str = "#6B7280";
+
 pub struct TrayState {
     pub update_available: bool,
+}
+
+pub struct ColorScheme {
+    pub critical_low: String,
+    pub low:          String,
+    pub normal:       String,
+    pub high:         String,
+    pub very_high:    String,
+}
+
+pub fn resolve_color(value: i32, trend: &str, threshold_low: i32, threshold_high: i32, colors: &ColorScheme) -> String {
+    if value <= 0 {
+        return COLOR_NO_DATA.to_string();
+    }
+    if trend == "Low" || value < CRITICAL_LOW_THRESHOLD {
+        return colors.critical_low.clone();
+    }
+    if value < threshold_low {
+        return colors.low.clone();
+    }
+    if value > VERY_HIGH_THRESHOLD {
+        return colors.very_high.clone();
+    }
+    if value > threshold_high {
+        return colors.high.clone();
+    }
+    colors.normal.clone()
 }
 
 fn trend_symbol(trend: &str) -> &str {
@@ -23,23 +54,24 @@ fn trend_symbol(trend: &str) -> &str {
         "FortyFiveDown" => "\\v",
         "SingleDown"    => "v",
         "DoubleDown"    => "vv",
+        "Low"           => "",
         _               => "?",
     }
 }
 
 fn hex_to_rgba(hex: &str) -> Rgba<u8> {
     let hex = hex.trim_start_matches('#');
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(128);
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(128);
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(128);
     Rgba([r, g, b, 255])
 }
 
-pub fn render_icon(value: i32, trend: &str, color_hex: &str, update_available: bool) -> Vec<u8> {
+pub fn render_icon(value: i32, trend: &str, bg_hex: &str, update_available: bool) -> Vec<u8> {
     let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
         ImageBuffer::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
 
-    let bg_color = hex_to_rgba(color_hex);
+    let bg_color = hex_to_rgba(bg_hex);
     for pixel in img.pixels_mut() {
         *pixel = bg_color;
     }
@@ -47,17 +79,19 @@ pub fn render_icon(value: i32, trend: &str, color_hex: &str, update_available: b
     let font_data = include_bytes!("../assets/fonts/NotoSans-Bold.ttf");
     let font = FontRef::try_from_slice(font_data).unwrap();
     let scale = PxScale::from(11.0);
+    let text_color = Rgba([255, 255, 255, 255]);
 
-    let label = if value == 0 {
-        "N/A".to_string()
+    if value <= 0 {
+        draw_text_mut(&mut img, text_color, 4, 10, scale, &font, "N/A");
     } else {
-        format!("{}", value)
-    };
+        let label = format!("{:.1}", value as f32 / 10.0);
+        draw_text_mut(&mut img, text_color, 2, 2, scale, &font, &label);
 
-    draw_text_mut(&mut img, Rgba([255, 255, 255, 255]), 2, 2, scale, &font, &label);
-
-    let trend_sym = trend_symbol(trend);
-    draw_text_mut(&mut img, Rgba([255, 255, 255, 255]), 2, 16, scale, &font, trend_sym);
+        let sym = trend_symbol(trend);
+        if !sym.is_empty() {
+            draw_text_mut(&mut img, text_color, 2, 16, scale, &font, sym);
+        }
+    }
 
     if update_available {
         for x in 24..32u32 {
@@ -88,7 +122,7 @@ pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu
 }
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let png_bytes = render_icon(0, "Flat", "#6B7280", false);
+    let png_bytes = render_icon(0, "Flat", COLOR_NO_DATA, false);
     let icon = Image::from_bytes(&png_bytes)?;
     let menu = build_menu(app, false)?;
 
@@ -138,11 +172,11 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn update_tray(app: &AppHandle, value: i32, trend: &str, color_hex: &str) {
+pub fn update_tray(app: &AppHandle, value: i32, trend: &str, bg_hex: &str) {
     let state = app.state::<std::sync::Mutex<TrayState>>();
     let update_available = state.lock().unwrap().update_available;
 
-    let png_bytes = render_icon(value, trend, color_hex, update_available);
+    let png_bytes = render_icon(value, trend, bg_hex, update_available);
 
     if let Ok(icon) = Image::from_bytes(&png_bytes) {
         if let Some(tray) = app.tray_by_id("main") {
@@ -150,13 +184,14 @@ pub fn update_tray(app: &AppHandle, value: i32, trend: &str, color_hex: &str) {
         }
     }
 
-    let display = if value == 0 {
+    let tooltip = if value <= 0 {
         "GlucoTray – N/A".to_string()
     } else {
-        format!("GlucoTray – {} {}", value, trend_symbol(trend))
+        let mmol = value as f32 / 10.0;
+        format!("GlucoTray – {:.1} mmol/L {}", mmol, trend_symbol(trend))
     };
 
     if let Some(tray) = app.tray_by_id("main") {
-        let _ = tray.set_tooltip(Some(&display));
+        let _ = tray.set_tooltip(Some(&tooltip));
     }
 }
