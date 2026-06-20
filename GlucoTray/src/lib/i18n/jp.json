@@ -55,7 +55,14 @@
       "zone_normal": "正常",
       "zone_low": "低い",
       "zone_critical_low": "危険に低い",
-      "autostart_label": "WindowsとともにGlucoTrayを起動しますか？"
+      "autostart_label": "WindowsとともにGlucoTrayを起動しますか？",
+      "change_credentials": "認証情報を変更",
+      "restart": "再起動",
+      "restart_required": "単位の変更を適用するには再起動が必要です。",
+      "restart_now": "今すぐ再起動",
+      "update_check": "更新を確認",
+      "contact": "お問い合わせ",
+      "repo": "リポジトリ"
     },
     "review": {
       "title": "確認",

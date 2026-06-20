@@ -55,7 +55,14 @@
       "zone_normal": "NORMAL",
       "zone_low": "NIEDRIG",
       "zone_critical_low": "KRITISCH NIEDRIG",
-      "autostart_label": "Soll GlucoTray mit Windows starten?"
+      "autostart_label": "Soll GlucoTray mit Windows starten?",
+      "change_credentials": "Anmeldedaten ändern",
+      "restart": "Neustart",
+      "restart_required": "Die Änderung der Einheit erfordert einen Neustart, um wirksam zu werden.",
+      "restart_now": "Jetzt neu starten",
+      "update_check": "Auf Updates prüfen",
+      "contact": "Kontakt",
+      "repo": "Repository"
     },
     "review": {
       "title": "Überprüfung",
