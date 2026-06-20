@@ -23,41 +23,44 @@
 - [x] Polling logic (150s interval)
 - [x] Error handling (typed AppError, internet check, retry logic per error type)
 - [x] Autostart (Windows + Linux via tauri-plugin-autostart)
-- [x] mg/dL als interne Einheit, einmalige Umrechnung in db.rs
-- [x] AppState mit unit-Setting
+- [x] mg/dL as internal unit, single conversion point in db.rs
+- [x] AppState with unit setting
+- [x] Legal document reading from bundled resources (`read_legal_document`)
+- [x] Legal acceptance storage (`save_legal_acceptance`)
 
 ### Frontend
 - [x] Tray icon with live value
 - [x] Trend arrow display (Unicode)
-- [x] Color scheme logic (zone-based, klinisch korrekt)
-- [ ] Unit toggle (mg/dL / mmol/L) im Settings-Fenster
+- [x] Color scheme logic (zone-based, clinically correct)
+- [ ] Unit toggle (mg/dL / mmol/L) in settings window
 
 ### Features
 #### feat: Wizard
+- [x] Step 0: legal document acceptance (privacy policy, terms of use, disclaimer), one document at a time with individual accept buttons
 - [x] G6 / G7 selection screen
 - [x] Prerequisites checklist
 - [x] Credentials input
 - [x] Live API validation
 - [x] Settings screen (unit, thresholds, color scheme, autostart)
 - [x] Completion screen
-- [x] App-Neustart nach Wizard-Abschluss
-- [x] Lokalisierte Klartext-Fehleranzeige (de/en/jp) bei Auth-Fehlern
+- [x] App restart after wizard completion
+- [x] Localized plain-text error display (de/en/jp) for auth errors
 
 #### feat: Tray
-- [x] Dynamisches Tray-Icon mit Live-Wert
-- [x] Trendpfeil (Unicode)
-- [x] Farbschema-Logik (5 Zonen)
-- [x] Kontextmenü (GlucoTray / Update check / Quit / Restart)
-- [x] Erster-Start-Notification (Tray pinnen)
-- [x] Update-Badge vorbereitet
-- [ ] Update check Logik (vor erstem Public Release)
+- [x] Dynamic tray icon with live value
+- [x] Trend arrow (Unicode)
+- [x] Color scheme logic (5 zones)
+- [x] Context menu (GlucoTray / Update check / Quit / Restart)
+- [x] First-start notification (pin tray icon)
+- [x] Update badge prepared
+- [ ] Update check logic (before first public release)
 
 #### feat: Settings
 - [x] Autostart toggle
 - [x] Unit selection
 - [x] Threshold configuration
 - [x] Color scheme configuration
-- [ ] Settings-Fenster (noch zu bauen)
+- [ ] Settings window (still to be built)
 
 #### feat: Error Handling
 - [x] Invalid credentials
@@ -65,10 +68,18 @@
 - [x] No readings
 - [x] Timeout
 - [x] Rate limit
-- [x] No internet connection (TCP-Check vor Auth)
+- [x] No internet connection (TCP check before auth)
+
+#### feat: Legal
+- [x] Privacy policy (de/en/jp)
+- [x] Terms of use (de/en/jp)
+- [x] Medical disclaimer (de/en/jp)
+- [x] Store description disclaimer (short form, de/en/jp)
+- [x] Wizard Step 0 for sequential acceptance
+- [ ] Re-prompt on document version change (versioned, not yet enforced at startup)
 
 ### Distribution
-- [ ] GitHub Actions release workflow
+- [ ] GitHub Actions release workflow (tauri-build.yml missing projectPath config — untested)
 - [ ] .exe installer build
 - [ ] .AppImage build
 - [ ] MSIX build
@@ -78,7 +89,7 @@
 - [ ] GitHub Pages live
 
 ### Test / Review
-- [ ] Wizard flow tested end-to-end
+- [ ] Wizard flow tested end-to-end (requires real machine, dev container insufficient)
 - [ ] API error cases tested
 - [ ] Windows 11 tested
 - [ ] Linux KDE Plasma tested
