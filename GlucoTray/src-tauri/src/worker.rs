@@ -4,6 +4,7 @@ use tauri::AppHandle;
 use crate::dexcom::{DexcomClient, Region};
 use crate::db::{insert_reading, get_setting};
 use crate::tray::{update_tray, resolve_color, ColorScheme};
+use crate::error::AppError;
 
 const POLL_INTERVAL_SECS: u64 = 150;
 const MAX_FAILURES: u8 = 8;
@@ -29,8 +30,26 @@ pub async fn start_worker(
     let mut failure_count: u8 = 0;
     let mut na_written = false;
 
-    if let Err(_) = client.authenticate(&username, &password).await {
-        failure_count = MAX_FAILURES;
+    if let Err(e) = client.authenticate(&username, &password).await {
+        e.log();
+
+        match e {
+            AppError::InvalidCredentials | AppError::NoSession => {
+                update_tray(&app, 0, "N/A", "#6B7280");
+                let _ = insert_reading(
+                    &pool,
+                    0,
+                    "N/A",
+                    &chrono::Utc::now().to_rfc3339(),
+                    false,
+                )
+                .await;
+                return;
+            }
+            _ => {
+                failure_count = MAX_FAILURES;
+            }
+        }
     }
 
     loop {
@@ -67,21 +86,50 @@ pub async fn start_worker(
                     update_tray(&app, value_mgdl, &reading.trend, &color);
                 }
             }
-            Err(_) => {
-                failure_count += 1;
+            Err(e) => {
+                e.log();
 
-                if failure_count >= MAX_FAILURES && !na_written {
-                    let _ = insert_reading(
-                        &pool,
-                        0,
-                        "N/A",
-                        &chrono::Utc::now().to_rfc3339(),
-                        false,
-                    )
-                    .await;
-                    na_written = true;
+                match e {
+                    AppError::InvalidCredentials | AppError::NoSession => {
+                        if !na_written {
+                            let _ = insert_reading(
+                                &pool,
+                                0,
+                                "N/A",
+                                &chrono::Utc::now().to_rfc3339(),
+                                false,
+                            )
+                            .await;
+                            na_written = true;
 
-                    update_tray(&app, 0, "N/A", "#6B7280");
+                            update_tray(&app, 0, "N/A", "#6B7280");
+                        }
+                        return;
+                    }
+                    AppError::RateLimit => {
+                        sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
+                        continue;
+                    }
+                    AppError::SessionExpired => {
+                        // Session wurde in get_readings bereits erneuert, einfach weiter pollen
+                    }
+                    _ => {
+                        failure_count += 1;
+
+                        if failure_count >= MAX_FAILURES && !na_written {
+                            let _ = insert_reading(
+                                &pool,
+                                0,
+                                "N/A",
+                                &chrono::Utc::now().to_rfc3339(),
+                                false,
+                            )
+                            .await;
+                            na_written = true;
+
+                            update_tray(&app, 0, "N/A", "#6B7280");
+                        }
+                    }
                 }
             }
         }

@@ -10,6 +10,7 @@ pub enum AppError {
     Timeout,
     RateLimit,
     SessionExpired,
+    NoInternetConnection,
     KeychainError(String),
     DbError(String),
     NetworkError(String),
@@ -25,6 +26,7 @@ impl std::fmt::Display for AppError {
             AppError::Timeout => write!(f, "Connection to Dexcom API failed"),
             AppError::RateLimit => write!(f, "Too many requests, please wait"),
             AppError::SessionExpired => write!(f, "Session expired, reconnecting"),
+            AppError::NoInternetConnection => write!(f, "No internet connection detected"),
             AppError::KeychainError(msg) => write!(f, "Keychain error: {}", msg),
             AppError::DbError(msg) => write!(f, "Database error: {}", msg),
             AppError::NetworkError(msg) => write!(f, "Network error: {}", msg),
@@ -39,7 +41,7 @@ impl AppError {
             AppError::InvalidCredentials | AppError::NoSession => {
                 error!(error = %self, "Authentication error");
             }
-            AppError::RateLimit | AppError::Timeout | AppError::NetworkError(_) => {
+            AppError::RateLimit | AppError::Timeout | AppError::NetworkError(_) | AppError::NoInternetConnection => {
                 warn!(error = %self, "Network error");
             }
             AppError::DbError(_) | AppError::KeychainError(_) => {
@@ -64,6 +66,18 @@ impl From<sqlx::Error> for AppError {
 impl From<keyring::Error> for AppError {
     fn from(e: keyring::Error) -> Self {
         AppError::KeychainError(e.to_string())
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        if e.is_timeout() {
+            AppError::Timeout
+        } else if e.is_connect() {
+            AppError::NoInternetConnection
+        } else {
+            AppError::NetworkError(e.to_string())
+        }
     }
 }
 
