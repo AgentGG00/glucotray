@@ -245,16 +245,63 @@ async fn save_settings(
     Ok(())
 }
 
+#[cfg(feature = "self-updater")]
+#[tauri::command]
+async fn check_for_update(app: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    let updater = app.updater().map_err(|e| e.to_string())?;
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            update
+                .download_and_install(|_chunk, _total| {}, || {})
+                .await
+                .map_err(|e| e.to_string())?;
+
+            Ok("updated".to_string())
+        }
+        Ok(None) => Ok("up_to_date".to_string()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[cfg(not(feature = "self-updater"))]
+#[tauri::command]
+async fn check_for_update(_app: tauri::AppHandle) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        Ok("store_hint".to_string())
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Ok("flatpak_hint".to_string())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        Ok("unsupported".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
-        ))
+        ));
+
+    #[cfg(feature = "self-updater")]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+
+    builder
         .manage(std::sync::Mutex::new(TrayState { update_available: false }))
         .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string() }))
         .invoke_handler(tauri::generate_handler![
@@ -267,6 +314,7 @@ pub fn run() {
             get_wizard_status,
             get_settings,
             save_settings,
+            check_for_update,
         ])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
