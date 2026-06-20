@@ -129,7 +129,8 @@
     "disclaimer_title": "Medical Disclaimer",
     "saving": "Saving...",
     "accept_continue": "Accept and continue",
-    "accept_finish": "Accept and start wizard"
+    "accept_finish": "Accept and start wizard",
+    "accept_checkbox": "I have read and accept the document"
     }
   }
 }

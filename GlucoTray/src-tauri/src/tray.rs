@@ -10,6 +10,7 @@ use ab_glyph::{FontRef, PxScale};
 use crate::db::mgdl_to_mmol;
 use crate::state::AppState;
 
+const ICON_SIZE: u32 = 16;
 const VERY_HIGH_MGDL: i32 = 250;
 const CRITICAL_LOW_MGDL: i32 = 54;
 const COLOR_NO_DATA: &str = "#6B7280";
@@ -85,7 +86,6 @@ fn na_text_color(app: &AppHandle) -> Rgba<u8> {
 }
 
 pub fn render_icon(
-    size: u32,
     value_mgdl: i32,
     trend: &str,
     color_hex: &str,
@@ -94,19 +94,18 @@ pub fn render_icon(
     update_available: bool,
 ) -> Vec<u8> {
     let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(size, size, Rgba([0, 0, 0, 0]));
+        ImageBuffer::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
 
     let font_data = include_bytes!("../assets/fonts/NotoSans-Bold.ttf");
     let font = FontRef::try_from_slice(font_data).unwrap();
 
-    let scale_factor = size as f32 / 32.0;
-    let text_scale = PxScale::from(13.0 * scale_factor);
-    let na_scale = PxScale::from(11.0 * scale_factor);
+    let text_scale = PxScale::from(13.0);
+    let na_scale = PxScale::from(11.0);
 
     if value_mgdl <= 0 {
         let (na_w, na_h) = text_size(na_scale, &font, "N/A");
-        let na_x = ((size as i32 - na_w as i32) / 2).max(0);
-        let na_y = ((size as i32 - na_h as i32) / 2).max(0);
+        let na_x = ((ICON_SIZE as i32 - na_w as i32) / 2).max(0);
+        let na_y = ((ICON_SIZE as i32 - na_h as i32) / 2).max(0);
         draw_text_mut(&mut img, na_color, na_x, na_y, na_scale, &font, "N/A");
     } else {
         let text_color = hex_to_rgba(color_hex);
@@ -125,16 +124,16 @@ pub fn render_icon(
         };
 
         let (text_w, text_h) = text_size(text_scale, &font, &combined);
-        let text_x = ((size as i32 - text_w as i32) / 2).max(0);
-        let text_y = ((size as i32 - text_h as i32) / 2).max(0);
+        let text_x = ((ICON_SIZE as i32 - text_w as i32) / 2).max(0);
+        let text_y = ((ICON_SIZE as i32 - text_h as i32) / 2).max(0);
 
         draw_text_mut(&mut img, text_color, text_x, text_y, text_scale, &font, &combined);
     }
 
     if update_available {
-        let badge_start = (size as f32 * 0.75).round() as u32;
-        let badge_end = (size as f32 * 0.25).round() as u32;
-        for x in badge_start..size {
+        let badge_start = (ICON_SIZE as f32 * 0.75).round() as u32;
+        let badge_end = (ICON_SIZE as f32 * 0.25).round() as u32;
+        for x in badge_start..ICON_SIZE {
             for y in 0..badge_end {
                 img.put_pixel(x, y, Rgba([220, 38, 38, 255]));
             }
@@ -163,7 +162,7 @@ pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let na_color = na_text_color(app);
-    let png_bytes = render_icon(32, 0, "Flat", COLOR_NO_DATA, na_color, "mgdl", false);
+    let png_bytes = render_icon(0, "Flat", COLOR_NO_DATA, na_color, "mgdl", false);
     let icon = Image::from_bytes(&png_bytes)?;
     let menu = build_menu(app, false)?;
 
@@ -209,14 +208,14 @@ pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, color_hex: &st
         s.update_available
     };
 
-    let (unit, size) = {
+    let unit = {
         let app_state = app.state::<std::sync::Mutex<AppState>>();
         let s = app_state.lock().unwrap();
-        (s.unit.clone(), s.tray_icon_size)
+        s.unit.clone()
     };
 
     let na_color = na_text_color(app);
-    let png_bytes = render_icon(size, value_mgdl, trend, color_hex, na_color, &unit, update_available);
+    let png_bytes = render_icon(value_mgdl, trend, color_hex, na_color, &unit, update_available);
 
     if let Ok(icon) = Image::from_bytes(&png_bytes) {
         if let Some(tray) = app.tray_by_id("main") {
@@ -234,14 +233,4 @@ pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, color_hex: &st
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(&tooltip));
     }
-}
-
-pub fn refresh_tray_icon(app: &AppHandle) {
-    let (value_mgdl, trend, color) = {
-        let state = app.state::<std::sync::Mutex<TrayState>>();
-        let s = state.lock().unwrap();
-        (s.last_value_mgdl, s.last_trend.clone(), s.last_color.clone())
-    };
-
-    update_tray(app, value_mgdl, &trend, &color);
 }

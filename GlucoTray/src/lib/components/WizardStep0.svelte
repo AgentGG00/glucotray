@@ -24,14 +24,14 @@
     let accepted = $state([false, false, false]);
     let isSaving = $state(false);
 
-    async function loadDocument() {
+    async function loadDocument(doc: string, lang: string) {
         isLoading = true;
         error = "";
         try {
             const { invoke } = await import("@tauri-apps/api/core");
             content = await invoke("read_legal_document", {
-                document: currentDoc,
-                lang: $locale ?? "en",
+                document: doc,
+                lang: lang,
             });
         } catch (e) {
             error = e as string;
@@ -41,11 +41,17 @@
     }
 
     $effect(() => {
-        loadDocument();
+        const doc = currentDoc;
+        const lang = $locale ?? "en";
+        loadDocument(doc, lang);
     });
 
-    function handleAccept() {
-        accepted[legalStep] = true;
+    function handleCheckboxChange() {
+        accepted[legalStep] = !accepted[legalStep];
+    }
+
+    function handleNext() {
+        if (!accepted[legalStep]) return;
 
         if (legalStep < DOC_ORDER.length - 1) {
             legalStep += 1;
@@ -103,20 +109,28 @@
         <p class="error-text">{error}</p>
     {/if}
 
+    <div class="section">
+        <label class="option">
+            <input
+                type="checkbox"
+                checked={accepted[legalStep]}
+                onchange={handleCheckboxChange}
+            />
+            {$_("wizard.legal.accept_checkbox")}
+        </label>
+    </div>
+
     <div class="actions">
         <button
             class="btn-next"
-            disabled={isLoading || isSaving || !!error}
-            onclick={handleAccept}
+            disabled={isLoading || isSaving || !!error || !accepted[legalStep]}
+            onclick={handleNext}
         >
             {#if isSaving}
                 {$_("wizard.legal.saving")}
-            {:else if legalStep < DOC_ORDER.length - 1}
-                {$_("wizard.legal.accept_continue")}
             {:else}
-                {$_("wizard.legal.accept_finish")}
+                {$_("wizard.buttons.next")}
             {/if}
         </button>
     </div>
 </div>
-

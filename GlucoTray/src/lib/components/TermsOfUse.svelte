@@ -12,14 +12,14 @@
     let isLoading = $state(true);
     let error = $state("");
 
-    async function loadDocument() {
+    async function loadDocument(lang: string) {
         isLoading = true;
         error = "";
         try {
             const { invoke } = await import("@tauri-apps/api/core");
             content = await invoke("read_legal_document", {
                 document: "terms-of-use",
-                lang: $locale ?? "en",
+                lang: lang,
             });
         } catch (e) {
             error = e as string;
@@ -29,13 +29,14 @@
     }
 
     $effect(() => {
-        loadDocument();
+        const lang = $locale ?? "en";
+        loadDocument(lang);
     });
 </script>
 
 <div class="wizard-screen">
     <div class="section">
-        <h2>{$_("wizard.legal.terms_title")}</h2>
+        <h2>{$_("wizard.terms-of-use.title")}</h2>
 
         {#if isLoading}
             <div class="auth-loading">

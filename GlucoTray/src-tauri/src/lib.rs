@@ -32,7 +32,6 @@ struct SettingsData {
     color_normal: String,
     color_high: String,
     color_very_high: String,
-    tray_icon_size: u32,
 }
 
 #[tauri::command]
@@ -128,7 +127,6 @@ async fn save_wizard_data(
     set_setting(&pool, "color_normal",       &color_normal).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
-    set_setting(&pool, "tray_icon_size",     "32").await.map_err(|e| e.to_string())?;
     set_setting(&pool, "wizard_done",        "true").await.map_err(|e| e.to_string())?;
 
     info!("save_wizard_data: wizard completed, wizard_done set to true");
@@ -221,12 +219,14 @@ async fn get_settings(app: tauri::AppHandle) -> Result<SettingsData, String> {
     let color_high         = get_setting(&pool, "color_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#F9A825".to_string());
     let color_very_high    = get_setting(&pool, "color_very_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#D84315".to_string());
 
-    let tray_icon_size = get_setting(&pool, "tray_icon_size").await
-        .map_err(|e| e.to_string())?
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(32);
-
-    info!("get_settings: loaded settings for settings window");
+    info!(
+        color_critical_low = %color_critical_low,
+        color_low = %color_low,
+        color_normal = %color_normal,
+        color_high = %color_high,
+        color_very_high = %color_very_high,
+        "get_settings: loaded settings for settings window"
+    );
 
     Ok(SettingsData {
         username,
@@ -240,7 +240,6 @@ async fn get_settings(app: tauri::AppHandle) -> Result<SettingsData, String> {
         color_normal,
         color_high,
         color_very_high,
-        tray_icon_size,
     })
 }
 
@@ -259,6 +258,15 @@ async fn save_settings(
 ) -> Result<(), String> {
     let pool = open_db(&app).await?;
 
+    info!(
+        color_critical_low = %color_critical_low,
+        color_low = %color_low,
+        color_normal = %color_normal,
+        color_high = %color_high,
+        color_very_high = %color_very_high,
+        "save_settings: received from frontend"
+    );
+
     set_setting(&pool, "unit",               &unit).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "threshold_low",      &threshold_low_mgdl.to_string()).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "threshold_high",     &threshold_high_mgdl.to_string()).await.map_err(|e| e.to_string())?;
@@ -270,24 +278,6 @@ async fn save_settings(
     set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
 
     info!("save_settings: settings window changes saved");
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn set_tray_icon_size(app: tauri::AppHandle, size: u32) -> Result<(), String> {
-    {
-        let state = app.state::<std::sync::Mutex<AppState>>();
-        let mut s = state.lock().unwrap();
-        s.tray_icon_size = size;
-    }
-
-    let pool = open_db(&app).await?;
-    set_setting(&pool, "tray_icon_size", &size.to_string()).await.map_err(|e| e.to_string())?;
-
-    tray::refresh_tray_icon(&app);
-
-    info!(size = size, "set_tray_icon_size: tray icon size updated live");
 
     Ok(())
 }
@@ -369,7 +359,7 @@ pub fn run() {
             last_trend: "Flat".to_string(),
             last_color: "#6B7280".to_string(),
         }))
-        .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string(), tray_icon_size: 32 }))
+        .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string() }))
         .invoke_handler(tauri::generate_handler![
             greet,
             validate_credentials,
@@ -380,7 +370,6 @@ pub fn run() {
             get_wizard_status,
             get_settings,
             save_settings,
-            set_tray_icon_size,
             check_for_update,
         ])
         .setup(|app| {
@@ -462,11 +451,6 @@ pub fn run() {
                         .unwrap_or(None)
                         .unwrap_or_else(|| "mgdl".to_string());
 
-                    let tray_icon_size: u32 = get_setting(&pool, "tray_icon_size").await
-                        .unwrap_or(None)
-                        .and_then(|v| v.parse().ok())
-                        .unwrap_or(32);
-
                     let autostart = get_setting(&pool, "autostart").await
                         .unwrap_or(None)
                         .map(|v| v == "true")
@@ -476,9 +460,8 @@ pub fn run() {
                         let state = app_handle.state::<std::sync::Mutex<AppState>>();
                         let mut s = state.lock().unwrap();
                         s.unit = unit;
-                        s.tray_icon_size = tray_icon_size;
                     }
-                    info!(tray_icon_size = tray_icon_size, "setup_async: AppState populated from DB");
+                    info!("setup_async: AppState populated from DB");
 
                     {
                         use tauri_plugin_autostart::ManagerExt;
