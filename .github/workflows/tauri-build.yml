@@ -37,6 +37,11 @@ jobs:
       - name: Rust einrichten
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: GlucoTray/src-tauri
+
       - name: Linux – System-Abhängigkeiten installieren
         if: matrix.platform == 'ubuntu-22.04'
         run: |

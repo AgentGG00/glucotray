@@ -1,9 +1,9 @@
 # GlucoTray
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/AgentGG/glucotray/release.yml?label=build)](https://github.com/AgentGG/glucotray/actions)
-[![Version](https://img.shields.io/github/v/release/AgentGG/glucotray)](https://github.com/AgentGG/glucotray/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/AgentGG00/glucotray/tauri-build.yml?label=build)](https://github.com/AgentGG00/glucotray/actions)
+[![Version](https://img.shields.io/github/v/release/AgentGG00/glucotray)](https://github.com/AgentGG00/glucotray/releases)
 [![Status](https://img.shields.io/badge/status-WIP-yellow)]()
-[![License](https://img.shields.io/github/license/AgentGG/glucotray)](https://github.com/AgentGG/glucotray/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/AgentGG00/glucotray)](https://github.com/AgentGG00/glucotray/blob/main/LICENSE)
 
 A lightweight system tray app for Windows and Linux that displays live blood glucose readings from Dexcom CGM sensors.
 
@@ -19,10 +19,10 @@ A lightweight system tray app for Windows and Linux that displays live blood glu
 ## Installation
 
 ### Windows
-Download the latest `.exe` installer from [Releases](https://github.com/AgentGG/glucotray/releases).
+Download the latest `.exe` installer from [Releases](https://github.com/AgentGG00/glucotray/releases).
 
 ### Linux
-Download the latest `.AppImage` from [Releases](https://github.com/AgentGG/glucotray/releases).
+Download the latest `.AppImage` from [Releases](https://github.com/AgentGG00/glucotray/releases).
 
 ```bash
 chmod +x GlucoTray.AppImage
@@ -38,4 +38,4 @@ chmod +x GlucoTray.AppImage
 
 ## License
 
-MIT © AgentGG
+MIT © AgentGG00
