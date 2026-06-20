@@ -9,7 +9,7 @@ mod state;
 pub use state::AppState;
 
 use db::init_db;
-use error::init_logger;
+use error::{init_logger, AppError};
 use keychain::{get_password, save_credentials};
 use db::{get_setting, set_setting};
 use dexcom::{Region, DexcomClient};
@@ -23,6 +23,22 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+fn error_code(e: &AppError) -> String {
+    match e {
+        AppError::InvalidCredentials => "InvalidCredentials".to_string(),
+        AppError::NoSession => "NoSession".to_string(),
+        AppError::NoReadings => "NoReadings".to_string(),
+        AppError::Timeout => "Timeout".to_string(),
+        AppError::RateLimit => "RateLimit".to_string(),
+        AppError::SessionExpired => "SessionExpired".to_string(),
+        AppError::NoInternetConnection => "NoInternetConnection".to_string(),
+        AppError::KeychainError(_) => "KeychainError".to_string(),
+        AppError::DbError(_) => "DbError".to_string(),
+        AppError::NetworkError(_) => "NetworkError".to_string(),
+        AppError::Unknown(_) => "Unknown".to_string(),
+    }
+}
+
 #[tauri::command]
 async fn validate_credentials(username: String, password: String, region: String) -> Result<(), String> {
     let r = match region.as_str() {
@@ -32,8 +48,15 @@ async fn validate_credentials(username: String, password: String, region: String
     };
 
     let mut client = DexcomClient::new(r);
-    client.authenticate(&username, &password).await?;
-    save_credentials(&username, &password).map_err(|e| e.to_string())?;
+
+    if let Err(e) = client.authenticate(&username, &password).await {
+        e.log();
+        return Err(error_code(&e));
+    }
+
+    if let Err(e) = save_credentials(&username, &password) {
+        return Err("KeychainError".to_string());
+    }
 
     Ok(())
 }

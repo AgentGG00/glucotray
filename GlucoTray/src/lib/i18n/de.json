@@ -92,6 +92,15 @@
     "region_ous": "Außerhalb der USA",
     "region_jp": "Japan",
     "finish": "GlucoTray starten"
+    },
+    "errors": {
+    "InvalidCredentials": "Benutzername oder Passwort falsch. Bitte überprüfe deine Anmeldedaten.",
+    "NoSession": "Keine aktive Share-Session gefunden. Aktiviere Share in der Dexcom App und trage einen Follower ein.",
+    "NoInternetConnection": "Keine Internetverbindung erkannt. Bitte Netzwerk prüfen und erneut versuchen.",
+    "Timeout": "Verbindung zur Dexcom API fehlgeschlagen. Bitte erneut versuchen.",
+    "RateLimit": "Zu viele Anfragen. Bitte kurz warten und erneut versuchen.",
+    "KeychainError": "Fehler beim Speichern der Anmeldedaten. Bitte erneut versuchen.",
+    "Unknown": "Ein unbekannter Fehler ist aufgetreten. Bitte erneut versuchen."
     }
   }
 }

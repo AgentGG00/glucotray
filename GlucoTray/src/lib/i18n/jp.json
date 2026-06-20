@@ -92,6 +92,15 @@
     "region_ous": "アメリカ以外",
     "region_jp": "日本",
     "finish": "GlucoTrayを起動"
+    },
+    "errors": {
+    "InvalidCredentials": "ユーザー名またはパスワードが間違っています。認証情報を確認してください。",
+    "NoSession": "アクティブなShareセッションが見つかりません。DexcomアプリでShareを有効にし、フォロワーを追加してください。",
+    "NoInternetConnection": "インターネット接続が検出されません。ネットワークを確認して再試行してください。",
+    "Timeout": "Dexcom APIへの接続に失敗しました。再試行してください。",
+    "RateLimit": "リクエストが多すぎます。少し待ってから再試行してください。",
+    "KeychainError": "認証情報の保存に失敗しました。再試行してください。",
+    "Unknown": "不明なエラーが発生しました。再試行してください。"
     }
   }
 }

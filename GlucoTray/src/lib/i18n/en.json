@@ -94,6 +94,15 @@
     "region_ous": "Outside US",
     "region_jp": "Japan",
     "finish": "Launch GlucoTray"
+    },
+    "errors": {
+    "InvalidCredentials": "Username or password incorrect. Please check your credentials.",
+    "NoSession": "No active Share session found. Activate Share in the Dexcom app and add a follower.",
+    "NoInternetConnection": "No internet connection detected. Please check your network and try again.",
+    "Timeout": "Connection to Dexcom API failed. Please try again.",
+    "RateLimit": "Too many requests. Please wait a moment and try again.",
+    "KeychainError": "Failed to save credentials. Please try again.",
+    "Unknown": "An unknown error occurred. Please try again."
     }
   }
 }

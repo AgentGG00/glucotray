@@ -342,8 +342,10 @@
         </div>
     </div>
 
-    {#if error || externalError}
-        <p class="error-text">{error || externalError}</p>
+    {#if error}
+        <p class="error-text">{error}</p>
+    {:else if externalError}
+        <p class="error-text">{$_(`wizard.errors.${externalError}`)}</p>
     {/if}
 
     <div class="actions">
