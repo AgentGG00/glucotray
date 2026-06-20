@@ -166,9 +166,44 @@
         await invoke("restart_app");
     }
 
+    let updateResult = $state("");
+    let flatpakCommand = $state("");
+    let flatpakCopied = $state(false);
+    let isCheckingUpdate = $state(false);
+
     async function handleUpdateCheck() {
-        // TODO: Update-Logik folgt im nächsten Schritt
-        console.log("Update check triggered");
+        isCheckingUpdate = true;
+        updateResult = "";
+        flatpakCommand = "";
+        flatpakCopied = false;
+
+        try {
+            const result = await invoke<string>("check_for_update");
+
+            if (result === "updated") {
+                updateResult = "updated";
+            } else if (result === "up_to_date") {
+                updateResult = "up_to_date";
+            } else if (result === "store_hint") {
+                window.open("ms-windows-store://pdp/?productid=9P2TR53FHBBH", "_blank");
+                updateResult = "store_hint";
+            } else if (result === "flatpak_hint") {
+                flatpakCommand = "flatpak update io.github.AgentGG00.GlucoTray";
+                updateResult = "flatpak_hint";
+            } else {
+                updateResult = "unsupported";
+            }
+        } catch (e) {
+            error = e as string;
+        } finally {
+            isCheckingUpdate = false;
+        }
+    }
+
+    async function copyFlatpakCommand() {
+        await navigator.clipboard.writeText(flatpakCommand);
+        flatpakCopied = true;
+        setTimeout(() => { flatpakCopied = false; }, 2000);
     }
 
     function handleCredentialsClick() {
@@ -189,12 +224,12 @@
         <div class="section">
             <h2>{$_("wizard.credentials.title")}</h2>
             <div class="field-group">
-                <label class="field-label">{$_("wizard.credentials.username")}</label>
-                <input class="text-input" value={username} disabled />
+                <label class="field-label" for="username">{$_("wizard.credentials.username")}</label>
+                <input id="username" class="text-input" value={username} disabled />
             </div>
             <div class="field-group">
-                <label class="field-label">{$_("wizard.credentials.password")}</label>
-                <input class="text-input" value="**********" disabled />
+                <label class="field-label" for="password">{$_("wizard.credentials.password")}</label>
+                <input id="password" class="text-input" value="**********" disabled />
             </div>
             <button class="btn-back" onclick={handleCredentialsClick}>
                 {$_("wizard.settings.change_credentials")}
@@ -304,12 +339,37 @@
             </div>
         {/if}
 
+        {#if updateResult}
+            <div class="section">
+                {#if updateResult === "updated"}
+                    <p class="hint-text">{$_("wizard.settings.update_installed")}</p>
+                    <button class="btn-next" onclick={handleRestart}>
+                        {$_("wizard.settings.restart_now")}
+                    </button>
+                {:else if updateResult === "up_to_date"}
+                    <p class="hint-text">{$_("wizard.settings.update_up_to_date")}</p>
+                {:else if updateResult === "store_hint"}
+                    <p class="hint-text">{$_("wizard.settings.update_store_opened")}</p>
+                {:else if updateResult === "flatpak_hint"}
+                    <p class="hint-text">{$_("wizard.settings.update_flatpak_hint")}</p>
+                    <div class="flatpak-command-row">
+                        <code class="flatpak-command">{flatpakCommand}</code>
+                        <button class="btn-back" onclick={copyFlatpakCommand}>
+                            {flatpakCopied ? $_("wizard.settings.copied") : $_("wizard.settings.copy")}
+                        </button>
+                    </div>
+                {:else if updateResult === "unsupported"}
+                    <p class="hint-text">{$_("wizard.settings.update_unsupported")}</p>
+                {/if}
+            </div>
+        {/if}
+
         <div class="actions">
             <button class="btn-back" onclick={handleRestart}>
                 {$_("wizard.settings.restart")}
             </button>
-            <button class="btn-back" onclick={handleUpdateCheck}>
-                {$_("wizard.settings.update_check")}
+            <button class="btn-back" disabled={isCheckingUpdate} onclick={handleUpdateCheck}>
+                {isCheckingUpdate ? $_("wizard.legal.saving") : $_("wizard.settings.update_check")}
             </button>
             <button class="btn-submit" disabled={!hasChanges || isSaving} onclick={handleSave}>
                 {#if isSaving}

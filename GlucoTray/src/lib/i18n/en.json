@@ -64,7 +64,14 @@
       "restart_now": "Restart now",
       "update_check": "Check for updates",
       "contact": "Contact",
-      "repo": "Repository"
+      "repo": "Repository",
+      "update_installed": "Update installed. Restart GlucoTray to use the new version.",
+      "update_up_to_date": "GlucoTray is already up to date.",
+      "update_store_opened": "The Microsoft Store has been opened. Check there for an available update.",
+      "update_flatpak_hint": "Run the following command in your terminal to update:",
+      "update_unsupported": "Update checking is not supported on this system.",
+      "copy": "Copy",
+      "copied": "Copied!"
     },
     "review": {
       "title": "Review",

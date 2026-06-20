@@ -62,7 +62,14 @@
       "restart_now": "今すぐ再起動",
       "update_check": "更新を確認",
       "contact": "お問い合わせ",
-      "repo": "リポジトリ"
+      "repo": "リポジトリ",
+      "update_installed": "アップデートがインストールされました。新しいバージョンを使用するにはGlucoTrayを再起動してください。",
+      "update_up_to_date": "GlucoTrayは最新の状態です。",
+      "update_store_opened": "Microsoft Storeを開きました。利用可能な更新を確認してください。",
+      "update_flatpak_hint": "更新するには、ターミナルで以下のコマンドを実行してください。",
+      "update_unsupported": "このシステムでは更新の確認はサポートされていません。",
+      "copy": "コピー",
+      "copied": "コピーしました！"
     },
     "review": {
       "title": "確認",

@@ -439,3 +439,23 @@
     font-size: 0.75rem;
     color: var(--text-muted);
 }
+
+.flatpak-command-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.flatpak-command {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: nowrap;
+}
