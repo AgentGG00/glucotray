@@ -99,8 +99,8 @@ pub fn render_icon(
     let font_data = include_bytes!("../assets/fonts/NotoSans-Bold.ttf");
     let font = FontRef::try_from_slice(font_data).unwrap();
 
-    let text_scale = PxScale::from(13.0);
-    let na_scale = PxScale::from(11.0);
+    let text_scale = PxScale::from(20.0);
+    let na_scale = PxScale::from(16.0);
 
     if value_mgdl <= 0 {
         let (na_w, na_h) = text_size(na_scale, &font, "N/A");
