@@ -21,7 +21,7 @@
 - [x] DB - Worker
 - [x] SQLite database setup
 - [x] Polling logic (150s interval)
-- [x] Error handling
+- [x] Error handling (typed AppError, internet check, retry logic per error type)
 - [x] Autostart (Windows + Linux via tauri-plugin-autostart)
 - [x] mg/dL als interne Einheit, einmalige Umrechnung in db.rs
 - [x] AppState mit unit-Setting
@@ -41,6 +41,7 @@
 - [x] Settings screen (unit, thresholds, color scheme, autostart)
 - [x] Completion screen
 - [x] App-Neustart nach Wizard-Abschluss
+- [x] Lokalisierte Klartext-Fehleranzeige (de/en/jp) bei Auth-Fehlern
 
 #### feat: Tray
 - [x] Dynamisches Tray-Icon mit Live-Wert
@@ -59,11 +60,12 @@
 - [ ] Settings-Fenster (noch zu bauen)
 
 #### feat: Error Handling
-- [ ] Invalid credentials
-- [ ] No session
-- [ ] No readings
-- [ ] Timeout
-- [ ] Rate limit
+- [x] Invalid credentials
+- [x] No session
+- [x] No readings
+- [x] Timeout
+- [x] Rate limit
+- [x] No internet connection (TCP-Check vor Auth)
 
 ### Distribution
 - [ ] GitHub Actions release workflow
