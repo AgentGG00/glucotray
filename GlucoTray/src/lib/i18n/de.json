@@ -127,7 +127,8 @@
     "disclaimer_title": "Medizinischer Haftungsausschluss",
     "saving": "Wird gespeichert...",
     "accept_continue": "Akzeptieren und weiter",
-    "accept_finish": "Akzeptieren und Wizard starten"
+    "accept_finish": "Akzeptieren und Wizard starten",
+    "accept_checkbox": "Ich habe das Dokument gelesen und akzeptiere es"
     }
   }
 }

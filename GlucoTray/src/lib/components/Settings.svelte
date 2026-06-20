@@ -6,7 +6,6 @@
     import { invoke } from "@tauri-apps/api/core";
 
     type Unit = "mmol" | "mgdl";
-    type TraySize = "small" | "medium" | "large";
 
     let { onChangeCredentials, onShowPrivacy, onShowTerms, onShowDisclaimer }: {
         onChangeCredentials: (region: string) => void;
@@ -46,18 +45,6 @@
         return `${mmol.toFixed(1)} mmol/L`;
     }
 
-    function sizeToPx(size: TraySize): number {
-        if (size === "small") return 16;
-        if (size === "large") return 64;
-        return 32;
-    }
-
-    function pxToSize(px: number): TraySize {
-        if (px <= 16) return "small";
-        if (px >= 64) return "large";
-        return "medium";
-    }
-
     let isLoading = $state(true);
     let isSaving = $state(false);
     let error = $state("");
@@ -71,7 +58,6 @@
     let minMmol    = $state(4.0);
     let maxMmol    = $state(10.0);
     let autostart  = $state(false);
-    let traySize   = $state<TraySize>("medium");
     let colors     = $state({
         criticalLow: "#C62828",
         low:         "#EF6C00",
@@ -106,8 +92,9 @@
                 colorNormal: string;
                 colorHigh: string;
                 colorVeryHigh: string;
-                trayIconSize: number;
             }>("get_settings");
+
+            console.log("get_settings raw response:", data);
 
             username = data.username;
             region = data.region;
@@ -117,7 +104,6 @@
             minMmol = closestValue(mgdlToMmol(data.thresholdLowMgdl), MIN_VALUES_MMOL);
             maxMmol = closestValue(mgdlToMmol(data.thresholdHighMgdl), MAX_VALUES_MMOL);
             autostart = data.autostart;
-            traySize = pxToSize(data.trayIconSize);
             colors = {
                 criticalLow: data.colorCriticalLow,
                 low:         data.colorLow,
@@ -148,15 +134,6 @@
     function handleMaxChange(e: Event) {
         maxMmol = parseFloat((e.target as HTMLSelectElement).value);
         markChanged();
-    }
-
-    async function handleTraySizeChange(size: TraySize) {
-        traySize = size;
-        try {
-            await invoke("set_tray_icon_size", { size: sizeToPx(size) });
-        } catch (e) {
-            error = e as string;
-        }
     }
 
     async function handleSave() {
@@ -341,25 +318,6 @@
                         <span class="color-hex">{colors.criticalLow}</span>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>{$_("wizard.settings.tray_icon_size")}</h2>
-            <p class="hint-text">{$_("wizard.settings.tray_icon_size_hint")}</p>
-            <div class="option-group">
-                <label class="option" class:selected={traySize === "small"}>
-                    <input type="radio" name="trayIconSize" value="small" checked={traySize === "small"} onchange={() => handleTraySizeChange("small")} />
-                    {$_("wizard.settings.tray_size_small")}
-                </label>
-                <label class="option" class:selected={traySize === "medium"}>
-                    <input type="radio" name="trayIconSize" value="medium" checked={traySize === "medium"} onchange={() => handleTraySizeChange("medium")} />
-                    {$_("wizard.settings.tray_size_medium")}
-                </label>
-                <label class="option" class:selected={traySize === "large"}>
-                    <input type="radio" name="trayIconSize" value="large" checked={traySize === "large"} onchange={() => handleTraySizeChange("large")} />
-                    {$_("wizard.settings.tray_size_large")}
-                </label>
             </div>
         </div>
 
