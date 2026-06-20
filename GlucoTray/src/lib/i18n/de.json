@@ -69,7 +69,12 @@
       "update_flatpak_hint": "Führe folgenden Befehl im Terminal aus, um zu aktualisieren:",
       "update_unsupported": "Die Update-Prüfung wird auf diesem System nicht unterstützt.",
       "copy": "Kopieren",
-      "copied": "Kopiert!"
+      "copied": "Kopiert!",
+      "tray_icon_size": "Tray-Icon-Größe",
+      "tray_icon_size_hint": "Die Änderung wird sofort im Tray sichtbar.",
+      "tray_size_small": "Klein (16px)",
+      "tray_size_medium": "Mittel (32px)",
+      "tray_size_large": "Groß (64px)"
     },
     "review": {
       "title": "Überprüfung",

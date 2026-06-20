@@ -52,6 +52,14 @@ jobs:
         working-directory: GlucoTray
         run: pnpm install
 
+      - name: Version aus Tag setzen
+        working-directory: GlucoTray/src-tauri
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          jq --arg v "$VERSION" '.version = $v' tauri.conf.json > tauri.conf.tmp.json
+          mv tauri.conf.tmp.json tauri.conf.json
+
       - name: Tauri Build
         uses: tauri-apps/tauri-action@v0
         env:
