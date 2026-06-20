@@ -5,18 +5,20 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 use image::{ImageBuffer, Rgba};
-use imageproc::drawing::draw_text_mut;
+use imageproc::drawing::{draw_text_mut, text_size};
 use ab_glyph::{FontRef, PxScale};
 use crate::db::mgdl_to_mmol;
 use crate::state::AppState;
 
-const ICON_SIZE: u32 = 32;
 const VERY_HIGH_MGDL: i32 = 250;
 const CRITICAL_LOW_MGDL: i32 = 54;
 const COLOR_NO_DATA: &str = "#6B7280";
 
 pub struct TrayState {
     pub update_available: bool,
+    pub last_value_mgdl: i32,
+    pub last_trend: String,
+    pub last_color: String,
 }
 
 pub struct ColorScheme {
@@ -68,39 +70,72 @@ fn hex_to_rgba(hex: &str) -> Rgba<u8> {
     Rgba([r, g, b, 255])
 }
 
-pub fn render_icon(value_mgdl: i32, trend: &str, bg_hex: &str, unit: &str, update_available: bool) -> Vec<u8> {
-    let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
+fn na_text_color(app: &AppHandle) -> Rgba<u8> {
+    let is_dark = app
+        .get_webview_window("main")
+        .and_then(|w| w.theme().ok())
+        .map(|theme| matches!(theme, tauri::Theme::Dark))
+        .unwrap_or(true);
 
-    let bg_color = hex_to_rgba(bg_hex);
-    for pixel in img.pixels_mut() {
-        *pixel = bg_color;
+    if is_dark {
+        Rgba([255, 255, 255, 255])
+    } else {
+        Rgba([0, 0, 0, 255])
     }
+}
+
+pub fn render_icon(
+    size: u32,
+    value_mgdl: i32,
+    trend: &str,
+    color_hex: &str,
+    na_color: Rgba<u8>,
+    unit: &str,
+    update_available: bool,
+) -> Vec<u8> {
+    let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
+        ImageBuffer::from_pixel(size, size, Rgba([0, 0, 0, 0]));
 
     let font_data = include_bytes!("../assets/fonts/NotoSans-Bold.ttf");
     let font = FontRef::try_from_slice(font_data).unwrap();
-    let scale = PxScale::from(11.0);
-    let text_color = Rgba([255, 255, 255, 255]);
+
+    let scale_factor = size as f32 / 32.0;
+    let text_scale = PxScale::from(13.0 * scale_factor);
+    let na_scale = PxScale::from(11.0 * scale_factor);
 
     if value_mgdl <= 0 {
-        draw_text_mut(&mut img, text_color, 4, 10, scale, &font, "N/A");
+        let (na_w, na_h) = text_size(na_scale, &font, "N/A");
+        let na_x = ((size as i32 - na_w as i32) / 2).max(0);
+        let na_y = ((size as i32 - na_h as i32) / 2).max(0);
+        draw_text_mut(&mut img, na_color, na_x, na_y, na_scale, &font, "N/A");
     } else {
+        let text_color = hex_to_rgba(color_hex);
+
         let label = if unit == "mmol" {
             format!("{:.1}", mgdl_to_mmol(value_mgdl))
         } else {
             format!("{}", value_mgdl)
         };
-        draw_text_mut(&mut img, text_color, 2, 2, scale, &font, &label);
 
         let sym = trend_symbol(trend);
-        if !sym.is_empty() {
-            draw_text_mut(&mut img, text_color, 2, 16, scale, &font, sym);
-        }
+        let combined = if sym.is_empty() {
+            label.clone()
+        } else {
+            format!("{} {}", label, sym)
+        };
+
+        let (text_w, text_h) = text_size(text_scale, &font, &combined);
+        let text_x = ((size as i32 - text_w as i32) / 2).max(0);
+        let text_y = ((size as i32 - text_h as i32) / 2).max(0);
+
+        draw_text_mut(&mut img, text_color, text_x, text_y, text_scale, &font, &combined);
     }
 
     if update_available {
-        for x in 24..32u32 {
-            for y in 0..8u32 {
+        let badge_start = (size as f32 * 0.75).round() as u32;
+        let badge_end = (size as f32 * 0.25).round() as u32;
+        for x in badge_start..size {
+            for y in 0..badge_end {
                 img.put_pixel(x, y, Rgba([220, 38, 38, 255]));
             }
         }
@@ -118,7 +153,7 @@ pub fn render_icon(value_mgdl: i32, trend: &str, bg_hex: &str, unit: &str, updat
 pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu<tauri::Wry>> {
     let title = MenuItem::with_id(app, "open_window", "GlucoTray", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let update_label = if update_available { "Updaten" } else { "Update check" };
+    let update_label = if update_available { "Update 🔴" } else { "Update check" };
     let update = MenuItem::with_id(app, "update", update_label, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
@@ -127,7 +162,8 @@ pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu
 }
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let png_bytes = render_icon(0, "Flat", COLOR_NO_DATA, "mgdl", false);
+    let na_color = na_text_color(app);
+    let png_bytes = render_icon(32, 0, "Flat", COLOR_NO_DATA, na_color, "mgdl", false);
     let icon = Image::from_bytes(&png_bytes)?;
     let menu = build_menu(app, false)?;
 
@@ -163,20 +199,24 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, bg_hex: &str) {
+pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, color_hex: &str) {
     let update_available = {
         let state = app.state::<std::sync::Mutex<TrayState>>();
-        let x = state.lock().unwrap().update_available;
-        x
+        let mut s = state.lock().unwrap();
+        s.last_value_mgdl = value_mgdl;
+        s.last_trend = trend.to_string();
+        s.last_color = color_hex.to_string();
+        s.update_available
     };
 
-    let unit = {
+    let (unit, size) = {
         let app_state = app.state::<std::sync::Mutex<AppState>>();
-        let x = app_state.lock().unwrap().unit.clone();
-        x
+        let s = app_state.lock().unwrap();
+        (s.unit.clone(), s.tray_icon_size)
     };
 
-    let png_bytes = render_icon(value_mgdl, trend, bg_hex, &unit, update_available);
+    let na_color = na_text_color(app);
+    let png_bytes = render_icon(size, value_mgdl, trend, color_hex, na_color, &unit, update_available);
 
     if let Ok(icon) = Image::from_bytes(&png_bytes) {
         if let Some(tray) = app.tray_by_id("main") {
@@ -194,4 +234,14 @@ pub fn update_tray(app: &AppHandle, value_mgdl: i32, trend: &str, bg_hex: &str) 
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(&tooltip));
     }
+}
+
+pub fn refresh_tray_icon(app: &AppHandle) {
+    let (value_mgdl, trend, color) = {
+        let state = app.state::<std::sync::Mutex<TrayState>>();
+        let s = state.lock().unwrap();
+        (s.last_value_mgdl, s.last_trend.clone(), s.last_color.clone())
+    };
+
+    update_tray(app, value_mgdl, &trend, &color);
 }

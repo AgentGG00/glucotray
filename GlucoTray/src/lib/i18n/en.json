@@ -71,7 +71,12 @@
       "update_flatpak_hint": "Run the following command in your terminal to update:",
       "update_unsupported": "Update checking is not supported on this system.",
       "copy": "Copy",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "tray_icon_size": "Tray Icon Size",
+      "tray_icon_size_hint": "The change is applied immediately in the tray.",
+      "tray_size_small": "Small (16px)",
+      "tray_size_medium": "Medium (32px)",
+      "tray_size_large": "Large (64px)"
     },
     "review": {
       "title": "Review",

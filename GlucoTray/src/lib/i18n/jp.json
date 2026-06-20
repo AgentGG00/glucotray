@@ -69,7 +69,12 @@
       "update_flatpak_hint": "更新するには、ターミナルで以下のコマンドを実行してください。",
       "update_unsupported": "このシステムでは更新の確認はサポートされていません。",
       "copy": "コピー",
-      "copied": "コピーしました！"
+      "copied": "コピーしました！",
+      "tray_icon_size": "トレイアイコンのサイズ",
+      "tray_icon_size_hint": "変更はトレイに即座に反映されます。",
+      "tray_size_small": "小 (16px)",
+      "tray_size_medium": "中 (32px)",
+      "tray_size_large": "大 (64px)"
     },
     "review": {
       "title": "確認",

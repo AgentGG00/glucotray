@@ -15,6 +15,7 @@ use db::{get_setting, set_setting};
 use dexcom::{Region, DexcomClient};
 use tauri::Manager;
 use tray::TrayState;
+use tracing::{info, error};
 
 const MMOL_TO_MGDL: f32 = 18.0182;
 
@@ -31,6 +32,7 @@ struct SettingsData {
     color_normal: String,
     color_high: String,
     color_very_high: String,
+    tray_icon_size: u32,
 }
 
 #[tauri::command]
@@ -123,13 +125,17 @@ async fn save_wizard_data(
     set_setting(&pool, "color_normal",       &color_normal).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "tray_icon_size",     "32").await.map_err(|e| e.to_string())?;
     set_setting(&pool, "wizard_done",        "true").await.map_err(|e| e.to_string())?;
+
+    info!("save_wizard_data: wizard completed, wizard_done set to true");
 
     Ok(())
 }
 
 #[tauri::command]
 async fn restart_app(app: tauri::AppHandle) {
+    info!("restart_app: restarting application");
     app.restart();
 }
 
@@ -147,6 +153,8 @@ async fn save_legal_acceptance(
     set_setting(&pool, "disclaimer_accepted", "true").await.map_err(|e| e.to_string())?;
     set_setting(&pool, "disclaimer_version", &legal_version).await.map_err(|e| e.to_string())?;
 
+    info!(version = %legal_version, "save_legal_acceptance: legal documents accepted");
+
     Ok(())
 }
 
@@ -156,9 +164,15 @@ fn read_legal_document(app: tauri::AppHandle, document: String, lang: String) ->
 
     let resource_path = app.path()
         .resolve(format!("legal/{}", filename), tauri::path::BaseDirectory::Resource)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            error!(filename = %filename, error = %e, "read_legal_document: failed to resolve resource path");
+            e.to_string()
+        })?;
 
-    std::fs::read_to_string(&resource_path).map_err(|e| e.to_string())
+    std::fs::read_to_string(&resource_path).map_err(|e| {
+        error!(path = %resource_path.display(), error = %e, "read_legal_document: failed to read file");
+        e.to_string()
+    })
 }
 
 #[tauri::command]
@@ -169,6 +183,8 @@ async fn get_wizard_status(app: tauri::AppHandle) -> Result<bool, String> {
         .map_err(|e| e.to_string())?
         .map(|v| v == "true")
         .unwrap_or(false);
+
+    info!(wizard_done = wizard_done, "get_wizard_status: queried");
 
     Ok(wizard_done)
 }
@@ -202,6 +218,13 @@ async fn get_settings(app: tauri::AppHandle) -> Result<SettingsData, String> {
     let color_high         = get_setting(&pool, "color_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#F9A825".to_string());
     let color_very_high    = get_setting(&pool, "color_very_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#D84315".to_string());
 
+    let tray_icon_size = get_setting(&pool, "tray_icon_size").await
+        .map_err(|e| e.to_string())?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(32);
+
+    info!("get_settings: loaded settings for settings window");
+
     Ok(SettingsData {
         username,
         region,
@@ -214,6 +237,7 @@ async fn get_settings(app: tauri::AppHandle) -> Result<SettingsData, String> {
         color_normal,
         color_high,
         color_very_high,
+        tray_icon_size,
     })
 }
 
@@ -242,6 +266,26 @@ async fn save_settings(
     set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
 
+    info!("save_settings: settings window changes saved");
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn set_tray_icon_size(app: tauri::AppHandle, size: u32) -> Result<(), String> {
+    {
+        let state = app.state::<std::sync::Mutex<AppState>>();
+        let mut s = state.lock().unwrap();
+        s.tray_icon_size = size;
+    }
+
+    let pool = open_db(&app).await?;
+    set_setting(&pool, "tray_icon_size", &size.to_string()).await.map_err(|e| e.to_string())?;
+
+    tray::refresh_tray_icon(&app);
+
+    info!(size = size, "set_tray_icon_size: tray icon size updated live");
+
     Ok(())
 }
 
@@ -254,6 +298,7 @@ async fn check_for_update(app: tauri::AppHandle) -> Result<String, String> {
 
     match updater.check().await {
         Ok(Some(update)) => {
+            info!(version = %update.version, "check_for_update: update found, downloading and installing");
             update
                 .download_and_install(|_chunk, _total| {}, || {})
                 .await
@@ -261,8 +306,14 @@ async fn check_for_update(app: tauri::AppHandle) -> Result<String, String> {
 
             Ok("updated".to_string())
         }
-        Ok(None) => Ok("up_to_date".to_string()),
-        Err(e) => Err(e.to_string()),
+        Ok(None) => {
+            info!("check_for_update: already up to date");
+            Ok("up_to_date".to_string())
+        }
+        Err(e) => {
+            error!(error = %e, "check_for_update: failed");
+            Err(e.to_string())
+        }
     }
 }
 
@@ -288,12 +339,19 @@ async fn check_for_update(_app: tauri::AppHandle) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            info!("single_instance: second launch attempt detected, focusing existing window");
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--autostart"]),
         ));
 
     #[cfg(feature = "self-updater")]
@@ -302,8 +360,13 @@ pub fn run() {
     }
 
     builder
-        .manage(std::sync::Mutex::new(TrayState { update_available: false }))
-        .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string() }))
+        .manage(std::sync::Mutex::new(TrayState {
+            update_available: false,
+            last_value_mgdl: 0,
+            last_trend: "Flat".to_string(),
+            last_color: "#6B7280".to_string(),
+        }))
+        .manage(std::sync::Mutex::new(AppState { unit: "mgdl".to_string(), tray_icon_size: 32 }))
         .invoke_handler(tauri::generate_handler![
             greet,
             validate_credentials,
@@ -314,14 +377,22 @@ pub fn run() {
             get_wizard_status,
             get_settings,
             save_settings,
+            set_tray_icon_size,
             check_for_update,
         ])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
                 .expect("Failed to get log dir");
-            init_logger(log_dir.to_str().unwrap());
+            let log_dir_str = log_dir.to_str().unwrap().to_string();
+            init_logger(&log_dir_str);
+
+            info!(path = %log_dir_str, "setup: logger initialized");
+
+            let is_autostart = std::env::args().any(|arg| arg == "--autostart");
+            info!(is_autostart = is_autostart, "setup: launch mode determined");
 
             tray::setup_tray(app.handle())?;
+            info!("setup: tray icon created");
 
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
@@ -329,24 +400,49 @@ pub fn run() {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
                         let _ = window_clone.hide();
+                        info!("window_event: close requested, hiding window instead of quitting");
                     }
                 });
+                info!("setup: window close interceptor registered");
+            } else {
+                error!("setup: could not find webview window 'main' to attach close interceptor");
             }
 
-            let db_path = app.path().app_data_dir()
-                .expect("Failed to get app data dir")
-                .join("glucotray.db");
+            let db_path = match app.path().app_data_dir() {
+                Ok(dir) => dir.join("glucotray.db"),
+                Err(e) => {
+                    error!(error = %e, "setup: failed to resolve app data dir");
+                    panic!("Failed to get app data dir: {}", e);
+                }
+            };
             let db_path_str = db_path.to_str().unwrap().to_string();
+            info!(path = %db_path_str, "setup: resolved database path");
+
             let app_handle = app.handle().clone();
 
             tauri::async_runtime::spawn(async move {
-                let pool = init_db(&db_path_str).await
-                    .expect("Failed to initialize database");
+                info!("setup_async: background initialization task started");
 
-                let wizard_done = get_setting(&pool, "wizard_done").await
-                    .unwrap_or(None)
-                    .map(|v| v == "true")
-                    .unwrap_or(false);
+                let pool = match init_db(&db_path_str).await {
+                    Ok(pool) => {
+                        info!(path = %db_path_str, "setup_async: database initialized successfully");
+                        pool
+                    }
+                    Err(e) => {
+                        error!(path = %db_path_str, error = %e, "setup_async: database initialization FAILED");
+                        return;
+                    }
+                };
+
+                let wizard_done = match get_setting(&pool, "wizard_done").await {
+                    Ok(v) => v.map(|v| v == "true").unwrap_or(false),
+                    Err(e) => {
+                        error!(error = %e, "setup_async: failed to read wizard_done setting");
+                        false
+                    }
+                };
+
+                info!(wizard_done = wizard_done, "setup_async: wizard status determined");
 
                 if wizard_done {
                     let username = get_setting(&pool, "username").await.unwrap_or(None);
@@ -354,6 +450,11 @@ pub fn run() {
                     let unit = get_setting(&pool, "unit").await
                         .unwrap_or(None)
                         .unwrap_or_else(|| "mgdl".to_string());
+
+                    let tray_icon_size: u32 = get_setting(&pool, "tray_icon_size").await
+                        .unwrap_or(None)
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(32);
 
                     let autostart = get_setting(&pool, "autostart").await
                         .unwrap_or(None)
@@ -364,16 +465,31 @@ pub fn run() {
                         let state = app_handle.state::<std::sync::Mutex<AppState>>();
                         let mut s = state.lock().unwrap();
                         s.unit = unit;
+                        s.tray_icon_size = tray_icon_size;
                     }
+                    info!(tray_icon_size = tray_icon_size, "setup_async: AppState populated from DB");
 
                     {
                         use tauri_plugin_autostart::ManagerExt;
                         let autostart_manager = app_handle.autolaunch();
                         if autostart {
                             let _ = autostart_manager.enable();
+                            info!("setup_async: autostart enabled");
                         } else {
                             let _ = autostart_manager.disable();
+                            info!("setup_async: autostart disabled");
                         }
+                    }
+
+                    if !is_autostart {
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            match window.show() {
+                                Ok(_) => info!("setup_async: manual launch detected, main window shown (settings)"),
+                                Err(e) => error!(error = %e, "setup_async: failed to show main window on manual launch"),
+                            }
+                        }
+                    } else {
+                        info!("setup_async: autostart launch detected, keeping main window hidden");
                     }
 
                     if let (Some(username), Some(region_str)) = (username, region_str) {
@@ -397,13 +513,23 @@ pub fn run() {
                                 .body("Damit der Blutzuckerwert immer sichtbar ist, pinne das Icon in der Taskleiste.")
                                 .show()
                                 .ok();
+                            info!("setup_async: first-start tray hint notification shown");
                         }
 
+                        info!(username = %username, region = %region_str, "setup_async: starting worker");
                         worker::start_worker(app_handle, pool, username, password, region).await;
+                    } else {
+                        error!("setup_async: wizard_done is true but username/region missing in DB, cannot start worker");
                     }
                 } else {
+                    info!("setup_async: wizard not done, showing main window for wizard");
                     if let Some(window) = app_handle.get_webview_window("main") {
-                        let _ = window.show();
+                        match window.show() {
+                            Ok(_) => info!("setup_async: main window shown successfully"),
+                            Err(e) => error!(error = %e, "setup_async: failed to show main window"),
+                        }
+                    } else {
+                        error!("setup_async: could not find webview window 'main' to show");
                     }
                 }
             });
