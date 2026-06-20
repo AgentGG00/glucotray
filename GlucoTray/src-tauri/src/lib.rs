@@ -275,6 +275,16 @@ pub fn run() {
 
             tray::setup_tray(app.handle())?;
 
+            if let Some(window) = app.get_webview_window("main") {
+                let window_clone = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = window_clone.hide();
+                    }
+                });
+            }
+
             let db_path = app.path().app_data_dir()
                 .expect("Failed to get app data dir")
                 .join("glucotray.db");
