@@ -5,7 +5,8 @@
 - **Repo:** https://github.com/AgentGG00/glucotray
 - **Publisher:** AgentGG
 - **License:** MIT
-- **Status:** Wizard + tray complete, autostart implemented, error handling complete, legal document acceptance (Step 0) implemented, settings window complete – next goal: TBD (window-close behavior just finished; update checker, mg/dL refactor, and LOW/HIGH handling are open issues)
+- **Store ID:** 9P2TR53FHBBH (Microsoft Store, already reserved in Partner Center)
+- **Status:** Wizard + tray complete, settings window complete, error handling complete, self-updater with store/flatpak fallback complete, CI/CD projectPath bug fixed – next: real-hardware testing, then pub-release prep (MSIX/Flatpak packaging, store submissions)
 
 ## Stack
 - **Frontend:** Svelte 5 + TypeScript + Tailwind CSS
@@ -18,6 +19,15 @@
 - `main` – stable, releases only
 - `dev` – active development
 - Feature branches from `dev`: `feature/name`, `fix/name`
+
+## Distribution Strategy (decided June 2026 — important context for any future packaging/CI work)
+
+- **Public release channels are Microsoft Store (Windows) and Flathub (Linux) ONLY.** No public direct `.exe` download is planned. This was a deliberate simplification after researching code-signing costs.
+- **Why no direct `.exe` distribution:** unsigned `.exe` triggers Windows Defender "unknown publisher" warnings; a real code-signing certificate is expensive (traditional OV certs) or ~$10/month minimum (Azure Trusted Signing) — decided not worth it for a free hobby project. Microsoft Store and Flathub both sign/verify identity for free (Store: free individual developer registration since the fee waiver, Microsoft signs MSIX during submission; Flathub: free, just GitHub/domain ownership verification, no certificate).
+- **`.exe`/`.AppImage` still get built automatically** on every GitHub Release via `tauri-build.yml` — but these are **dev-only artifacts**, living only in GitHub Releases, never linked from the public GitHub Page. Intended for Niklas's own testing and for technically comfortable users who know how to handle unsigned/repo-distributed builds.
+- **MSIX (Store) and Flatpak (Flathub) packaging are deferred** to pub-release preparation. Plan: a SECOND, separate workflow (e.g. `store-build.yml`) with `workflow_dispatch` (manual trigger only, never automatic on release) will build and submit these — kept deliberately separate so dev releases never accidentally trigger store updates.
+- **Azure AD is NOT needed** for now — it's only required for the Microsoft Store Submission API (automated/programmatic submission). Manual submission via the Partner Center web UI needs nothing beyond the (already free) developer account. Revisit only if automated store publishing becomes worthwhile later.
+- **MSIX is not a native Tauri bundle target** (`tauri.conf.json`'s `bundle.targets` supports `msi` via WiX, not `msix`) — packaging an MSIX requires an additional step (e.g. Windows SDK `MakeAppx.exe`) on top of a built `.exe`/`.msi`. This is why MSIX packaging is its own deferred workflow, not just a config tweak.
 
 ## Data & Units
 - API always returns mg/dL as Arabic numerals
@@ -40,8 +50,8 @@
 - N/A when `is_valid = false` or `value = 0`
 - Update badge: red dot top-right when `update_available = true`
 - Tooltip shows both units: 97 mg/dL / 5.4 mmol/L ↑
-- **Context menu (current, post-refactor):** `GlucoTray` (now active, opens/focuses the window) / separator / `Update check` / separator / `Quit` / `Restart`
-- **Left-click on tray icon does nothing app-wise anymore** — removed the previous `on_tray_icon_event` handler, since left-click is unreliable for opening windows on Windows/Linux (only used there for dragging the icon). All window-opening now goes through the `GlucoTray` context menu entry (`on_menu_event`, id `"open_window"`).
+- **Context menu:** `GlucoTray` (active, opens/focuses the window) / separator / `Update check` / separator / `Quit` / `Restart`
+- **Left-click on tray icon does nothing app-wise** — removed `on_tray_icon_event`, unreliable for opening windows on Windows/Linux (only used there for dragging the icon). All window-opening goes through the `GlucoTray` context menu entry (`on_menu_event`, id `"open_window"`).
 - `Quit` exits the whole app (`app.exit(0)`); `Restart` fully restarts (`app.restart()`)
 
 ## Window Behavior
@@ -58,7 +68,7 @@ App starts → DB empty → window visible → wizard (Step 0 legal, then Steps 
 DB init → unit + autostart from DB → AppState populated → autostart enable/disable → worker starts → tray active → first start: toast notification (one-time, `tray_hint_shown` in DB)
 
 ### Opening the Window Later (Settings)
-Tray context menu → `GlucoTray` → window shown/focused → `+page.svelte` calls `get_wizard_status` on mount → since `wizard_done == true`, renders `Settings.svelte` instead of the wizard steps. Closing the window again only hides it (see "Window Behavior" above); the worker is untouched.
+Tray context menu → `GlucoTray` → window shown/focused → `+page.svelte` calls `get_wizard_status` on mount → since `wizard_done == true`, renders `Settings.svelte` instead of the wizard steps. Closing the window again only hides it; the worker is untouched.
 
 ## Autostart
 - `tauri-plugin-autostart` – Windows Registry + Linux .desktop
@@ -88,14 +98,14 @@ Tray context menu → `GlucoTray` → window shown/focused → `+page.svelte` ca
 - All other errors (`Timeout`, `NetworkError`, `NoInternetConnection`, `NoReadings`, `Unknown`) go through the existing `failure_count` mechanism, N/A after `MAX_FAILURES` (8)
 
 ### `lib.rs`
-- `validate_credentials` now also takes `app: tauri::AppHandle` and, on success, writes the (possibly changed) `username` into the `settings` table via `set_setting` — this lets the same command serve both the wizard and the settings "change credentials" flow without a separate command
-- New helper `open_db(app) -> Result<SqlitePool, String>` consolidates the repeated "resolve app data dir → build db path → init_db" pattern used in almost every command
+- `validate_credentials` also takes `app: tauri::AppHandle` and, on success, writes the (possibly changed) `username` into the `settings` table via `set_setting` — lets the same command serve both the wizard and the settings "change credentials" flow
+- Helper `open_db(app) -> Result<SqlitePool, String>` consolidates the repeated "resolve app data dir → build db path → init_db" pattern used in almost every command
 - `error_code(&AppError) -> String` maps enum variant to a stable string code returned to the frontend
 
 ### Frontend (i18n)
 - `errors` block in `de.json`, `en.json`, `jp.json` under `wizard.errors.*` with plain text + suggested fix per error code
 - `WizardStep2.svelte`: `externalError` (error code from Step 3) is resolved via `$_(\`wizard.errors.${externalError}\`)`, shows localized text instead of raw code
-- `WizardStep3.svelte` unchanged – just passes `onFail(e as string)` through, translation happens wherever it's consumed (Step 2 in wizard mode, also Step 2 reused in settings mode)
+- `WizardStep3.svelte` unchanged – just passes `onFail(e as string)` through, translation happens wherever it's consumed
 
 ## Legal Documents
 
@@ -106,70 +116,101 @@ Tray context menu → `GlucoTray` → window shown/focused → `+page.svelte` ca
 - Minimum age 16 per Art. 8 GDPR (health data, Art. 9 GDPR)
 
 ### Bundling
-- `tauri.conf.json` → `bundle.resources`: `"../../docs/legal/*": "legal/"` (path relative to `src-tauri/`, since `docs/` sits one level above the `GlucoTray/` project root)
+- `tauri.conf.json` → `bundle.resources`: `"../../docs/legal/*": "legal/"` (path relative to `src-tauri/`)
 - Accessible at runtime via `BaseDirectory::Resource`
 
 ### Backend (`lib.rs`)
 - `read_legal_document(document, lang) -> Result<String, String>` – reads `legal/{document}.{lang}.md` from the resource directory; used both by `WizardStep0.svelte` and the three settings-window legal viewers
-- `save_legal_acceptance(legal_version) -> Result<(), String>` – writes six settings keys: `privacy_accepted`, `privacy_version`, `terms_accepted`, `terms_version`, `disclaimer_accepted`, `disclaimer_version` (single shared version string across all three documents, e.g. `"2026-06"`)
+- `save_legal_acceptance(legal_version) -> Result<(), String>` – writes six settings keys (`privacy_accepted`, `privacy_version`, `terms_accepted`, `terms_version`, `disclaimer_accepted`, `disclaimer_version`)
 
 ### Wizard Step 0 (`WizardStep0.svelte`)
 - Single component with internal sub-step state (`legalStep` 0–2) cycling through privacy policy → terms of use → disclaimer
-- One individual "Accept" button per document; only after accepting all three does `save_legal_acceptance` fire once, then `onNext()` advances to Step 1
+- One individual "Accept" button per document; after all three, `save_legal_acceptance` fires once, then `onNext()` advances to Step 1
 - `$effect` reloads the document whenever `legalStep` changes
 
 ### Settings-Window Legal Viewers (`PrivacyPolicy.svelte`, `TermsOfUse.svelte`, `Disclaimer.svelte`)
-- Three separate, near-identical components (deliberately not a shared generic component, per explicit request) — each loads exactly one fixed document via `read_legal_document` and renders it via `marked` + `{@html}`
-- Read-only: no accept button, just a "Back" button (`onBack` prop) that returns to `mode = "settings"` in `+page.svelte`
-- No automatic "last updated" date from git history — considered, rejected as too complex for a local resource bundle (no `.git` available at runtime in the built app); the manually-maintained "Last updated" line inside each markdown file is the only date shown
+- Three separate, near-identical components (deliberately not a shared generic component) — each loads exactly one fixed document via `read_legal_document` and renders it via `marked` + `{@html}`
+- Read-only: just a "Back" button (`onBack` prop) that returns to `mode = "settings"`
+- No automatic "last updated" date from git history — rejected as too complex for a local resource bundle at runtime; manually-maintained "Last updated" line inside each markdown file is the only date shown
 
 ## Wizard – Current State
 
 ### Step 0 – Legal Acceptance
-- See "Legal Documents" above
+See "Legal Documents" above.
 
 ### Step 1 – Sensor & Region
-- G6 / G7 selection, region: US / OUS / Japan
-- Prerequisites checklist, language via flag button (de/en/jp)
+G6 / G7 selection, region: US / OUS / Japan. Prerequisites checklist, language via flag button (de/en/jp).
 
 ### Step 2 – Credentials
-- Login type: email or phone number
-- Email: regex + Levenshtein typo detection
-- Phone: libphonenumber-js, OS locale for country
-- Password: custom display, eye toggle, paste support
-- `externalError` prop for errors, shown as localized plain text via i18n
-- **Reused in settings mode** for credential changes (see "Settings Window" below)
+Login type: email or phone number. Email: regex + Levenshtein typo detection. Phone: libphonenumber-js, OS locale for country. Password: custom display, eye toggle, paste support. `externalError` prop for errors, shown as localized plain text via i18n. **Reused in settings mode** for credential changes.
 
 ### Step 3 – Auth Loading
-- `onMount` → `invoke("validate_credentials")`
-- Success → Step 4 (wizard mode) or back to Settings (settings mode), failure → Step 2 with error code
-- **Reused in settings mode** (see "Settings Window" below)
+`onMount` → `invoke("validate_credentials")`. Success → Step 4 (wizard mode) or back to Settings (settings mode), failure → Step 2 with error code. **Reused in settings mode.**
 
 ### Step 4 – Settings (Wizard)
-- Unit: mg/dL or mmol/L (radio buttons)
-- Dropdowns show values in selected unit, internal state in mmol/L (see issue #12)
-- Min: 2.8–4.5 mmol/L, Max: 8.0–13.0 mmol/L
-- 5 color zones with native color picker
-- Autostart checkbox
+Unit: mg/dL or mmol/L (radio buttons). Dropdowns show values in selected unit, internal state in mmol/L (see issue #12). Min: 2.8–4.5 mmol/L, Max: 8.0–13.0 mmol/L. 5 color zones with native color picker. Autostart checkbox.
 
 ### Step 5 – Completion
-- `onMount` → `invoke("save_wizard_data")` with mg/dL thresholds
-- Summary, error display on save failure
-- Finish → `invoke("restart_app")`
+`onMount` → `invoke("save_wizard_data")` with mg/dL thresholds. Summary, error display on save failure. Finish → `invoke("restart_app")`.
 
 ## Settings Window
 
-- **Not a separate Tauri window** — same `main` window as the wizard, content switched via routing in `+page.svelte`, not a second `WebviewWindow`
-- Opened via tray context menu `GlucoTray` entry (`window.show()` + `window.set_focus()`); closing it only hides it (see "Window Behavior")
-- `+page.svelte` introduces a `mode` state (`"loading" | "wizard" | "settings" | "settings-edit-credentials" | "settings-validate-credentials" | "settings-privacy" | "settings-terms" | "settings-disclaimer"`), determined on mount via `get_wizard_status`: `false` → `"wizard"` (starts at Step 0), `true` → `"settings"`
-- **Layout:** single scrollable page, sections top to bottom: Credentials (read-only + "change credentials" button) → Unit → Threshold range → Color picker → Autostart checkbox → action row (Restart / Update check placeholder / global Save) → footer (legal document links, contact link, repo link)
-- **Loading:** `get_settings` command fetches current values on mount (username, region, unit, thresholds in mg/dL, autostart, 5 colors); thresholds are converted to mmol/L for the dropdown and snapped to the closest fixed dropdown value if not an exact match (helper `closestValue`)
-- **Saving:** single global "Save" button (`save_settings`) for unit/thresholds/colors/autostart; tracked via a `hasChanges` flag set by every input's change handler, button disabled until something changed
-- **Unit change:** after a successful save, if the unit differs from the value loaded at mount (`originalUnit`), a restart notice + "Restart now" button appears (does not force a restart, just offers one)
-- **Credentials section:** username and a fixed `**********` placeholder password shown, both disabled/read-only (password is never fetched from the keychain for display — purely cosmetic placeholder, no roundtrip). A "change credentials" button switches `+page.svelte`'s `mode` to `"settings-edit-credentials"`, which renders `WizardStep2.svelte` with settings-specific callbacks: on success → `mode = "settings-validate-credentials"` (renders `WizardStep3.svelte`, also settings-specific callbacks) → on auth success, back to `mode = "settings"`; on auth failure, back to `"settings-edit-credentials"` with the error shown in Step 2 (identical UX to the wizard's own Step 2/3 failure loop); "Back" from Step 2 in this mode returns directly to `"settings"`, never to wizard Step 0/1
-- **Legal document access:** three footer buttons (privacy/terms/disclaimer) set `mode` to `"settings-privacy"` / `"settings-terms"` / `"settings-disclaimer"`, each rendering its respective standalone viewer component; "Back" in each returns to `"settings"`
-- **Update check button:** present in the UI, calls a placeholder `handleUpdateCheck()` function that currently just logs to console — actual update logic not implemented yet
-- Styling for the new footer links lives in `wizard.css` (despite the filename, by deliberate choice rather than creating a separate stylesheet) — `.footer-links`, `.footer-link`, `.footer-separator`
+- **Not a separate Tauri window** — same `main` window as the wizard, content switched via routing in `+page.svelte`
+- Opened via tray context menu `GlucoTray` entry; closing it only hides it
+- `+page.svelte` has a `mode` state (`"loading" | "wizard" | "settings" | "settings-edit-credentials" | "settings-validate-credentials" | "settings-privacy" | "settings-terms" | "settings-disclaimer"`), determined on mount via `get_wizard_status`
+- **Layout:** single scrollable page — Credentials (read-only + "change credentials") → Unit → Threshold range → Color picker → Autostart checkbox → action row (Restart / Update check / global Save) → footer (legal links, contact, repo)
+- **Loading:** `get_settings` fetches current values on mount; thresholds converted to mmol/L for dropdowns, snapped to closest fixed value if not exact (helper `closestValue`)
+- **Saving:** single global "Save" button (`save_settings`) for unit/thresholds/colors/autostart; `hasChanges` flag gates the button
+- **Unit change:** after save, if unit differs from `originalUnit`, a restart notice + "Restart now" button appears
+- **Credentials section:** username + fixed `**********` placeholder (never fetched from keychain, purely cosmetic). "Change credentials" → `mode = "settings-edit-credentials"` (WizardStep2) → success → `"settings-validate-credentials"` (WizardStep3) → auth success → back to `"settings"`; auth failure → back to `"settings-edit-credentials"` with error shown
+- **Legal document access:** three footer buttons set `mode` to the respective `settings-privacy/terms/disclaimer` value
+- Styling lives in `wizard.css` (deliberate choice, despite the filename) — `.footer-links`, `.footer-link`, `.footer-separator`, `.flatpak-command-row`, `.flatpak-command`
+
+## Self-Updater
+
+### Architecture decision
+- Built using `tauri-plugin-updater`, gated behind a Cargo feature flag `self-updater` (NOT a runtime check) so the updater code is physically absent from MSIX/Flatpak builds, present only in `.exe`/`.AppImage` builds
+- Rationale: Store and Flatpak installations are sandboxed and manage their own updates; a self-updater inside them would be both pointless and potentially blocked by the sandbox. The `.exe`/`.AppImage` builds (dev artifacts, see "Distribution Strategy") are the only ones that benefit from self-updating, since they have no platform-managed update mechanism.
+
+### `Cargo.toml`
+```toml
+[features]
+default = []
+self-updater = ["tauri-plugin-updater"]
+
+[dependencies]
+tauri-plugin-updater = { version = "2", optional = true }
+```
+
+### Setup completed
+- Signer keypair generated via `cargo tauri signer generate -w ~/.tauri/glucotray.key`
+- Private key content + password stored as GitHub repo secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (repo-level, not org-level — only this repo needs them)
+- Public key embedded in `tauri.conf.json` → `plugins.updater.pubkey`
+- `tauri.conf.json` → `bundle.createUpdaterArtifacts: true` (required for new apps, generates `.sig` files + `latest.json`)
+- `tauri.conf.json` → `plugins.updater.endpoints`: GitHub Releases `latest.json` (`https://github.com/AgentGG00/glucotray/releases/latest/download/latest.json`), no separate hosting needed since `tauri-action` generates and uploads this automatically
+- `tauri.conf.json` → `plugins.updater.windows.installMode: "passive"` (background install, no NSIS UI dialogs during update)
+- `capabilities/default.json` → `updater:default` permission added (covers check/download/install/download-and-install)
+- `tauri-build.yml` matrix args now include `--features self-updater` for both Windows and Linux dev builds
+
+### Backend (`lib.rs`)
+- Two `check_for_update` implementations selected via `#[cfg(feature = "self-updater")]` / `#[cfg(not(...))]` — only one compiles into any given binary
+  - **With feature:** uses `tauri_plugin_updater::UpdaterExt`, calls `updater.check()`, on `Some(update)` calls `update.download_and_install(...)`, returns `"updated"` or `"up_to_date"`
+  - **Without feature:** returns a platform-specific hint string — `"store_hint"` on Windows, `"flatpak_hint"` on Linux, `"unsupported"` otherwise. No actual action taken in Rust; the frontend interprets the string.
+- `run()` builds the `tauri::Builder` into a `let mut builder` variable so the updater plugin can be conditionally appended via `#[cfg(feature = "self-updater")]` before the rest of the builder chain (`.manage(...)`, `.invoke_handler(...)`, etc.)
+
+### Frontend (`Settings.svelte`)
+- `handleUpdateCheck()` calls `check_for_update`, branches on the returned string:
+  - `"updated"` → shows install-success message + a "Restart now" button (does not auto-restart)
+  - `"up_to_date"` → shows a simple "already up to date" message
+  - `"store_hint"` → opens `ms-windows-store://pdp/?productid=9P2TR53FHBBH` in a new window/tab (Store deep link, Store ID already reserved in Partner Center)
+  - `"flatpak_hint"` → shows the command `flatpak update io.github.AgentGG00.GlucoTray` in a monospace box with a "Copy" button (`navigator.clipboard.writeText`), no auto-execution
+  - `"unsupported"` → generic fallback message
+- New i18n keys under `wizard.settings.*`: `update_installed`, `update_up_to_date`, `update_store_opened`, `update_flatpak_hint`, `update_unsupported`, `copy`, `copied` (de/en/jp)
+- Flatpak app ID used throughout: `io.github.AgentGG00.GlucoTray` (standard Flathub naming scheme, not yet verified/reserved on Flathub itself — just the convention assumed for now)
+
+### Not yet done
+- No end-to-end test with an actual signed release yet — the whole chain (signing in CI, `latest.json` generation, real update download/install) is untested
+- MSIX/Flatpak packaging itself (separate from the updater) is still deferred to pub-release prep
 
 ## Key Files
 | File | Purpose |
@@ -182,73 +223,80 @@ Tray context menu → `GlucoTray` → window shown/focused → `+page.svelte` ca
 | `src/lib/components/WizardStep3.svelte` | Step 3 – auth validation; reused in settings mode |
 | `src/lib/components/WizardStep4.svelte` | Step 4 (wizard only) |
 | `src/lib/components/WizardStep5.svelte` | Step 5 (wizard only) |
-| `src/lib/components/Settings.svelte` | Settings window content (unit/thresholds/colors/autostart/credentials view/footer) |
+| `src/lib/components/Settings.svelte` | Settings window content (unit/thresholds/colors/autostart/credentials/update check/footer) |
 | `src/lib/components/PrivacyPolicy.svelte` | Read-only privacy policy viewer (settings footer) |
 | `src/lib/components/TermsOfUse.svelte` | Read-only terms of use viewer (settings footer) |
 | `src/lib/components/Disclaimer.svelte` | Read-only disclaimer viewer (settings footer) |
-| `src/lib/styles/wizard.css` | Styles for wizard AND settings (incl. legal document rendering, footer links) |
+| `src/lib/styles/wizard.css` | Styles for wizard AND settings (legal document rendering, footer links, flatpak command box) |
 | `src/lib/styles/app.css` | Global styles + CSS variables |
 | `src/lib/i18n/index.ts` | i18n setup with OS locale |
-| `src/lib/i18n/de.json` | German translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` additions |
-| `src/lib/i18n/en.json` | English translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` additions |
-| `src/lib/i18n/jp.json` | Japanese translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` additions |
-| `src-tauri/src/lib.rs` | Tauri commands, app setup, window-close interception, `error_code()`/`open_db()` helpers |
+| `src/lib/i18n/de.json` | German translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` |
+| `src/lib/i18n/en.json` | English translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` |
+| `src/lib/i18n/jp.json` | Japanese translations, incl. `wizard.errors.*`, `wizard.legal.*`, `wizard.settings.*` |
+| `src-tauri/src/lib.rs` | Tauri commands, app setup, window-close interception, self-updater registration, `error_code()`/`open_db()` helpers |
 | `src-tauri/src/state.rs` | AppState struct |
-| `src-tauri/src/tray.rs` | Tray icon, color logic, menu (left-click handler removed, `open_window` menu entry added) |
+| `src-tauri/src/tray.rs` | Tray icon, color logic, menu (left-click handler removed, `open_window` menu entry) |
 | `src-tauri/src/dexcom.rs` | Dexcom Share API, typed errors, internet check |
 | `src-tauri/src/db.rs` | SQLite init, queries, conversion |
 | `src-tauri/src/worker.rs` | Polling worker, tray update, AppError matching |
 | `src-tauri/src/keychain.rs` | OS keychain integration |
 | `src-tauri/src/error.rs` | AppError enum, logger init, From conversions |
+| `src-tauri/Cargo.toml` | Dependencies, `self-updater` feature flag |
+| `src-tauri/capabilities/default.json` | Permissions, incl. `updater:default` |
+| `src-tauri/tauri.conf.json` | Bundle resources, updater config (pubkey, endpoints, install mode) |
 | `src-tauri/assets/fonts/NotoSans-Bold.ttf` | Font for tray rendering |
 | `docs/legal/*.{de,en,jp}.md` | Privacy policy, terms of use, disclaimer (bundled as Tauri resources) |
 | `docs/legal/store-disclaimer.md` | Short-form disclaimer for store listings (NOT bundled into the app) |
+| `.github/workflows/tauri-build.yml` | Dev build workflow — fixed `projectPath`, write permissions, `self-updater` feature args |
 
 ## Tauri Commands
 | Command | Purpose |
 |---|---|
-| `validate_credentials` | Dexcom auth + save password to keychain + update `username` setting; returns error code instead of raw text; used by wizard Step 3 AND settings credential change |
+| `validate_credentials` | Dexcom auth + save password to keychain + update `username` setting; returns error code; used by wizard Step 3 AND settings credential change |
 | `save_wizard_data` | Write all wizard settings to SQLite, mark `wizard_done` |
 | `restart_app` | App restart |
 | `read_legal_document` | Read a legal document for a given language from bundled resources |
 | `save_legal_acceptance` | Write acceptance + version for all three legal documents to SQLite |
-| `get_wizard_status` | Returns `wizard_done` bool, used by `+page.svelte` to decide wizard vs. settings mode |
-| `get_settings` | Returns current settings (username, region, unit, thresholds in mg/dL, autostart, 5 colors) for the settings window |
-| `save_settings` | Writes unit/thresholds/colors/autostart (NOT credentials, which go through `validate_credentials`) |
+| `get_wizard_status` | Returns `wizard_done` bool, used by `+page.svelte` for routing |
+| `get_settings` | Returns current settings for the settings window |
+| `save_settings` | Writes unit/thresholds/colors/autostart (NOT credentials) |
+| `check_for_update` | Self-update flow (if `self-updater` feature enabled) or store/flatpak hint string otherwise |
 
 ## Workflows
 | Workflow | Trigger |
 |---|---|
 | `release.yml` | PR merged to main |
 | `ci-build.yml` | Release published |
-| `tauri-build.yml` | Release published — **likely misconfigured**: `tauri-apps/tauri-action@v0` has no `projectPath` set, even though the Tauri project lives in `GlucoTray/`, not the workspace root. Only ran once so far (failed, Tauri wasn't installed); never successfully tested. |
+| `tauri-build.yml` | Release published — builds `.exe` (NSIS) and `.AppImage`/`.deb` with `--features self-updater`, `projectPath: GlucoTray` fixed, `permissions: contents: write` at workflow root, repo "Read and write permissions" enabled (had to be unlocked at the GitHub **organization** level first — the repo-level restrictive default was inherited from the org policy) |
 | `review.yml` | PR to main |
 | `create-issue.yml` | Push with changes to `docs/issues.md` — confirmed working (issues #11 and #12 created this way) |
+| *(planned, not yet created)* `store-build.yml` | Manual `workflow_dispatch` only — will build + submit MSIX (Store) and Flatpak (Flathub), deliberately separate from automatic dev releases |
 
 ## Installer Architecture Decision (June 2026)
-
-- **Windows (.exe via Tauri/NSIS bundler):** planned to eventually move the entire wizard flow (including Step 0) into the NSIS installer itself, likely via an external helper binary for network/DB access since NSIS's scripting language can't do this natively. Not yet implemented, decision only.
-- **Linux:** stays on Flatpak with the in-app wizard for now, since Flatpak's sandboxing model doesn't support interactive install-time hooks (unlike `.deb` postinst or AUR PKGBUILD). An additional `.deb`/AUR path with an installer-side wizard was considered but deferred, to avoid losing Flatpak's reach (Fedora/openSUSE/KDE Neon) — can be revisited later.
-- **Microsoft Store:** keeps the in-app wizard in all cases, since MSIX does not allow interactive installer dialogs.
+- **Windows (.exe via Tauri/NSIS bundler):** planned to eventually move the entire wizard flow (including Step 0) into the NSIS installer itself, via an external helper binary for network/DB access. Not yet implemented, decision only.
+- **Linux:** stays on Flatpak with the in-app wizard, since Flatpak's sandboxing model doesn't support interactive install-time hooks. An additional `.deb`/AUR path with an installer-side wizard was considered, deferred to avoid losing Flatpak's reach.
+- **Microsoft Store:** keeps the in-app wizard in all cases, MSIX doesn't allow interactive installer dialogs.
 
 ## Known Open GitHub Issues
-- **#11** – Dexcom LOW/HIGH string values not handled. `GlucoseReading.value` is `u32`, can't deserialize the literal strings `"LOW"`/`"HIGH"` that Dexcom sometimes returns instead of a number. `resolve_color` in `tray.rs` only checks `trend == "Low"` for color, doesn't adjust the displayed value, and has no `"High"` handling at all. Needs a defined value range mapping and corresponding fixes in `dexcom.rs` + `tray.rs`. Not urgent.
-- **#12** – Refactor frontend/backend to use mg/dL internally everywhere. `WizardStep4.svelte`/`Settings.svelte` hold mmol/L as primary dropdown state, only converting to mg/dL when saving. Contradicts the stated single-conversion-point architecture, not urgent, purely a consistency cleanup.
+- **#11** – Dexcom LOW/HIGH string values not handled. `GlucoseReading.value` is `u32`, can't deserialize literal `"LOW"`/`"HIGH"` strings. `resolve_color` only checks `trend == "Low"` for color, no `"High"` handling at all. Not urgent.
+- **#12** – Refactor frontend/backend to use mg/dL internally everywhere. `WizardStep4.svelte`/`Settings.svelte` hold mmol/L as primary dropdown state. Not urgent, consistency cleanup only.
 
 ## Open Items
-- Update checker (button exists in settings window, no logic yet)
+- End-to-end test of self-updater with a real signed GitHub Release (untested chain: CI signing → `latest.json` → download → install)
 - Wizard flow tested end-to-end on real hardware
 - Settings window tested end-to-end on real hardware
 - Targeted API error-case testing (invalid credentials, no session, no readings, timeout, rate limit, no internet)
-- `tauri-build.yml` projectPath fix before first real release
 - Issue #11 (LOW/HIGH value handling) and #12 (mg/dL refactor) — both deferred, not blocking
-- Before first public release: Azure AD + store submission, Flathub bot, installer-side wizard for Windows (see "Installer Architecture Decision")
+- `store-build.yml` workflow (MSIX + Flatpak, manual trigger) — to be built during pub-release prep, not now
+- Flathub app ID `io.github.AgentGG00.GlucoTray` assumed by convention, not yet actually reserved/verified on Flathub
+- Before first public release: Microsoft Store submission (manual, Store ID 9P2TR53FHBBH already reserved), Flathub submission, GitHub Pages with Store link + Flatpak install instructions (no more direct `.exe` link per the updated distribution strategy)
 
 ## Notes for Next Session
-- Settings window uses the SAME Tauri window as the wizard — there is no second `WebviewWindow`. Don't reintroduce a separate window unless explicitly requested again; this was a deliberate correction mid-session.
-- `get_latest_reading` in `db.rs` still unused — explicitly decided NOT to use it for a settings-window live preview (rejected); no current planned use, fine to leave as-is
-- `delete_credentials` in `keychain.rs` — still not used; credential changes currently just overwrite via `save_credentials`, never explicitly delete old entries first. Worth checking if that's an issue (e.g. orphaned keychain entries on username change) — not yet flagged as an issue, just noting it
+- Settings window uses the SAME Tauri window as the wizard — no second `WebviewWindow`. This was a deliberate mid-session correction; don't reintroduce a separate window unless explicitly requested again.
+- `get_latest_reading` in `db.rs` still unused — explicitly decided NOT to use it for a settings-window live preview; no current planned use
+- `delete_credentials` in `keychain.rs` — still not used; credential changes just overwrite via `save_credentials`, never explicitly delete old entries first. Worth checking for orphaned keychain entries on username change — not yet flagged as an issue, just noting it
 - `MMOL_TO_MGDL` constant in `lib.rs` still unused — check if still needed
-- Legal document version is set once at acceptance time (`LEGAL_VERSION = "2026-06"` in `WizardStep0.svelte`) and never re-checked at startup — no mechanism yet to detect a version mismatch and re-prompt the user if documents are updated later
-- Two GitHub issues are open and confirmed visible via `web_fetch` on the public issue URLs (#11, #12) — Claude can fetch `https://github.com/AgentGG00/glucotray/issues/<number>` directly when given the URL, including full body and any comments; no GitHub connector/MCP needed for read access on this public repo
-</markdown>
+- Legal document version is set once at acceptance time (`LEGAL_VERSION = "2026-06"` in `WizardStep0.svelte`) and never re-checked at startup — no re-prompt mechanism yet if documents are updated later
+- GitHub issues are readable via `web_fetch` on public issue URLs (e.g. `https://github.com/AgentGG00/glucotray/issues/<number>`) — confirmed working for #11 and #12, full body and metadata visible, no GitHub connector/MCP needed for this public repo
+- Distribution strategy was significantly simplified mid-session (see "Distribution Strategy" section above) — if reviewing older context/summaries that still mention a public `.exe` download path or Azure AD as a near-term task, that information is **outdated**; the current plan is Store + Flathub only, Azure AD deferred indefinitely
+- The org-level GitHub Actions policy initially blocked "Read and write permissions" at the repo level — this needed to be loosened in the **organization** settings first (not just the repo settings) before the repo-level toggle became available
