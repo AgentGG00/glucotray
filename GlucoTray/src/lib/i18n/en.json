@@ -103,6 +103,14 @@
     "RateLimit": "Too many requests. Please wait a moment and try again.",
     "KeychainError": "Failed to save credentials. Please try again.",
     "Unknown": "An unknown error occurred. Please try again."
+    },
+    "legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Use",
+    "disclaimer_title": "Medical Disclaimer",
+    "saving": "Saving...",
+    "accept_continue": "Accept and continue",
+    "accept_finish": "Accept and start wizard"
     }
   }
 }

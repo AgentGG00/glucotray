@@ -371,3 +371,40 @@
     border-radius: 0.25rem;
     border: 1px solid var(--border);
 }
+
+    .legal-document {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background-color: var(--bg-secondary);
+        text-align: left;
+    }
+
+    .legal-document :global(h1) {
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .legal-document :global(h2) {
+        font-size: 1.05rem;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .legal-document :global(p) {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+    }
+
+    .legal-document :global(ul) {
+        margin-bottom: 0.5rem;
+        padding-left: 1.25rem;
+    }
+
+    .legal-progress {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+    }

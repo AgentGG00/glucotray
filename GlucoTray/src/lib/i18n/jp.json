@@ -101,6 +101,14 @@
     "RateLimit": "リクエストが多すぎます。少し待ってから再試行してください。",
     "KeychainError": "認証情報の保存に失敗しました。再試行してください。",
     "Unknown": "不明なエラーが発生しました。再試行してください。"
+    },
+    "legal": {
+    "privacy_title": "プライバシーポリシー",
+    "terms_title": "利用規約",
+    "disclaimer_title": "医療免責事項",
+    "saving": "保存中...",
+    "accept_continue": "同意して次へ",
+    "accept_finish": "同意してウィザードを開始"
     }
   }
 }

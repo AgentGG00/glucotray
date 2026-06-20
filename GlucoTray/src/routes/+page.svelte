@@ -1,5 +1,6 @@
 <script lang="ts">
     import { waitLocale } from "svelte-i18n";
+    import WizardStep0 from "$lib/components/WizardStep0.svelte";
     import WizardStep1 from "$lib/components/WizardStep1.svelte";
     import WizardStep2 from "$lib/components/WizardStep2.svelte";
     import WizardStep3 from "$lib/components/WizardStep3.svelte";
@@ -7,7 +8,7 @@
     import WizardStep5 from "$lib/components/WizardStep5.svelte";
     import { invoke } from "@tauri-apps/api/core";
 
-    let step = $state(1);
+    let step = $state(0);
     let authError = $state("");
     let wizardData = $state({
         sensor: "",
@@ -26,6 +27,10 @@
             veryHigh:    "#D84315",
         },
     });
+
+    function handleStep0() {
+        step = 1;
+    }
 
     function handleStep1(data: { sensor: string; region: string }) {
         wizardData.sensor = data.sensor;
@@ -98,7 +103,9 @@
 {#await waitLocale()}
     <div class="loading">...</div>
 {:then}
-    {#if step === 1}
+    {#if step === 0}
+        <WizardStep0 onNext={handleStep0} />
+    {:else if step === 1}
         <WizardStep1 onNext={handleStep1} onCancel={handleCancel} />
     {:else if step === 2}
         <WizardStep2

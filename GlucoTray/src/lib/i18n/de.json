@@ -101,6 +101,14 @@
     "RateLimit": "Zu viele Anfragen. Bitte kurz warten und erneut versuchen.",
     "KeychainError": "Fehler beim Speichern der Anmeldedaten. Bitte erneut versuchen.",
     "Unknown": "Ein unbekannter Fehler ist aufgetreten. Bitte erneut versuchen."
+    },
+    "legal": {
+    "privacy_title": "Datenschutzerklärung",
+    "terms_title": "Nutzungsbedingungen",
+    "disclaimer_title": "Medizinischer Haftungsausschluss",
+    "saving": "Wird gespeichert...",
+    "accept_continue": "Akzeptieren und weiter",
+    "accept_finish": "Akzeptieren und Wizard starten"
     }
   }
 }
