@@ -57,10 +57,13 @@ fn error_code(e: &AppError) -> String {
 }
 
 async fn open_db(app: &tauri::AppHandle) -> Result<sqlx::SqlitePool, String> {
-    let db_path = app.path().app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("glucotray.db");
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?;
 
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+
+    let db_path = data_dir.join("glucotray.db");
     let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
     init_db(&db_path_str).await.map_err(|e| e.to_string())
 }
@@ -408,13 +411,21 @@ pub fn run() {
                 error!("setup: could not find webview window 'main' to attach close interceptor");
             }
 
-            let db_path = match app.path().app_data_dir() {
-                Ok(dir) => dir.join("glucotray.db"),
+            let data_dir = match app.path().app_data_dir() {
+                Ok(dir) => dir,
                 Err(e) => {
                     error!(error = %e, "setup: failed to resolve app data dir");
                     panic!("Failed to get app data dir: {}", e);
                 }
             };
+
+            if let Err(e) = std::fs::create_dir_all(&data_dir) {
+                error!(path = %data_dir.display(), error = %e, "setup: failed to create app data dir");
+                panic!("Failed to create app data dir: {}", e);
+            }
+            info!(path = %data_dir.display(), "setup: app data dir created/verified");
+
+            let db_path = data_dir.join("glucotray.db");
             let db_path_str = db_path.to_str().unwrap().to_string();
             info!(path = %db_path_str, "setup: resolved database path");
 
