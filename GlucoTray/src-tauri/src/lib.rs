@@ -1,4 +1,4 @@
-/mod dexcom;
+mod dexcom;
 mod db;
 mod worker;
 mod keychain;
@@ -17,6 +17,21 @@ use tauri::Manager;
 use tray::TrayState;
 
 const MMOL_TO_MGDL: f32 = 18.0182;
+
+#[derive(serde::Serialize)]
+struct SettingsData {
+    username: String,
+    region: String,
+    unit: String,
+    threshold_low_mgdl: i32,
+    threshold_high_mgdl: i32,
+    autostart: bool,
+    color_critical_low: String,
+    color_low: String,
+    color_normal: String,
+    color_high: String,
+    color_very_high: String,
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -39,8 +54,22 @@ fn error_code(e: &AppError) -> String {
     }
 }
 
+async fn open_db(app: &tauri::AppHandle) -> Result<sqlx::SqlitePool, String> {
+    let db_path = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("glucotray.db");
+
+    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
+    init_db(&db_path_str).await.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
-async fn validate_credentials(username: String, password: String, region: String) -> Result<(), String> {
+async fn validate_credentials(
+    app: tauri::AppHandle,
+    username: String,
+    password: String,
+    region: String,
+) -> Result<(), String> {
     let r = match region.as_str() {
         "ous" => Region::Ous,
         "jp"  => Region::Jp,
@@ -54,9 +83,12 @@ async fn validate_credentials(username: String, password: String, region: String
         return Err(error_code(&e));
     }
 
-    if let Err(e) = save_credentials(&username, &password) {
+    if let Err(_) = save_credentials(&username, &password) {
         return Err("KeychainError".to_string());
     }
+
+    let pool = open_db(&app).await?;
+    set_setting(&pool, "username", &username).await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -77,12 +109,7 @@ async fn save_wizard_data(
     color_high: String,
     color_very_high: String,
 ) -> Result<(), String> {
-    let db_path = app.path().app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("glucotray.db");
-
-    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
-    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
+    let pool = open_db(&app).await?;
 
     set_setting(&pool, "username",           &username).await.map_err(|e| e.to_string())?;
     set_setting(&pool, "region",             &region).await.map_err(|e| e.to_string())?;
@@ -111,12 +138,7 @@ async fn save_legal_acceptance(
     app: tauri::AppHandle,
     legal_version: String,
 ) -> Result<(), String> {
-    let db_path = app.path().app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("glucotray.db");
-
-    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
-    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
+    let pool = open_db(&app).await?;
 
     set_setting(&pool, "privacy_accepted", "true").await.map_err(|e| e.to_string())?;
     set_setting(&pool, "privacy_version", &legal_version).await.map_err(|e| e.to_string())?;
@@ -139,6 +161,90 @@ fn read_legal_document(app: tauri::AppHandle, document: String, lang: String) ->
     std::fs::read_to_string(&resource_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn get_wizard_status(app: tauri::AppHandle) -> Result<bool, String> {
+    let pool = open_db(&app).await?;
+
+    let wizard_done = get_setting(&pool, "wizard_done").await
+        .map_err(|e| e.to_string())?
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    Ok(wizard_done)
+}
+
+#[tauri::command]
+async fn get_settings(app: tauri::AppHandle) -> Result<SettingsData, String> {
+    let pool = open_db(&app).await?;
+
+    let username = get_setting(&pool, "username").await.map_err(|e| e.to_string())?.unwrap_or_default();
+    let region = get_setting(&pool, "region").await.map_err(|e| e.to_string())?.unwrap_or_default();
+    let unit = get_setting(&pool, "unit").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "mgdl".to_string());
+
+    let threshold_low_mgdl = get_setting(&pool, "threshold_low").await
+        .map_err(|e| e.to_string())?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(70);
+
+    let threshold_high_mgdl = get_setting(&pool, "threshold_high").await
+        .map_err(|e| e.to_string())?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(180);
+
+    let autostart = get_setting(&pool, "autostart").await
+        .map_err(|e| e.to_string())?
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    let color_critical_low = get_setting(&pool, "color_critical_low").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#C62828".to_string());
+    let color_low          = get_setting(&pool, "color_low").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#EF6C00".to_string());
+    let color_normal       = get_setting(&pool, "color_normal").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#2E7D32".to_string());
+    let color_high         = get_setting(&pool, "color_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#F9A825".to_string());
+    let color_very_high    = get_setting(&pool, "color_very_high").await.map_err(|e| e.to_string())?.unwrap_or_else(|| "#D84315".to_string());
+
+    Ok(SettingsData {
+        username,
+        region,
+        unit,
+        threshold_low_mgdl,
+        threshold_high_mgdl,
+        autostart,
+        color_critical_low,
+        color_low,
+        color_normal,
+        color_high,
+        color_very_high,
+    })
+}
+
+#[tauri::command]
+async fn save_settings(
+    app: tauri::AppHandle,
+    unit: String,
+    threshold_low_mgdl: i32,
+    threshold_high_mgdl: i32,
+    autostart: bool,
+    color_critical_low: String,
+    color_low: String,
+    color_normal: String,
+    color_high: String,
+    color_very_high: String,
+) -> Result<(), String> {
+    let pool = open_db(&app).await?;
+
+    set_setting(&pool, "unit",               &unit).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_low",      &threshold_low_mgdl.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "threshold_high",     &threshold_high_mgdl.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "autostart",          &autostart.to_string()).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_critical_low", &color_critical_low).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_low",          &color_low).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_normal",       &color_normal).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_high",         &color_high).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "color_very_high",    &color_very_high).await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -158,6 +264,9 @@ pub fn run() {
             restart_app,
             read_legal_document,
             save_legal_acceptance,
+            get_wizard_status,
+            get_settings,
+            save_settings,
         ])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()

@@ -2,7 +2,7 @@ use tauri::{
     AppHandle, Manager,
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
 };
 use image::{ImageBuffer, Rgba};
 use imageproc::drawing::draw_text_mut;
@@ -116,9 +116,9 @@ pub fn render_icon(value_mgdl: i32, trend: &str, bg_hex: &str, unit: &str, updat
 }
 
 pub fn build_menu(app: &AppHandle, update_available: bool) -> tauri::Result<Menu<tauri::Wry>> {
-    let title = MenuItem::with_id(app, "title", "GlucoTray", false, None::<&str>)?;
+    let title = MenuItem::with_id(app, "open_window", "GlucoTray", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let update_label = if update_available { "Update 🔴" } else { "Update check" };
+    let update_label = if update_available { "Updaten" } else { "Update check" };
     let update = MenuItem::with_id(app, "update", update_label, true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
@@ -139,6 +139,12 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             let app = app.clone();
             move |_tray, event| {
                 match event.id.as_ref() {
+                    "open_window" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
                     "quit"    => { app.exit(0); }
                     "restart" => { app.restart(); }
                     "update"  => {
@@ -149,22 +155,6 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                         }
                     }
                     _ => {}
-                }
-            }
-        })
-        .on_tray_icon_event({
-            let app = app.clone();
-            move |_tray, event| {
-                if let TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                } = event
-                {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
                 }
             }
         })
