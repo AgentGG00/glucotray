@@ -5,6 +5,9 @@ on:
     paths:
       - 'docs/issues.md'
 
+permissions:
+  issues: write
+
 jobs:
   issue:
     uses: AgentGG00/workflows/.github/workflows/create-issue.yml@main

@@ -1,0 +1,130 @@
+{
+  "wizard": {
+    "sensor": {
+      "title": "Which sensor system?",
+      "g6": "G6",
+      "g7": "G7"
+    },
+    "region": {
+      "title": "Which region?",
+      "us": "USA",
+      "ous": "Outside USA",
+      "jp": "Japan"
+    },
+    "requirements": {
+      "title": "Requirements",
+      "app_installed": "Dexcom app is installed",
+      "share_active": "Dexcom Share is enabled",
+      "follower_added": "At least one follower has been added"
+    },
+    "buttons": {
+      "next": "Next",
+      "back": "Back",
+      "cancel": "Cancel",
+      "submit": "Confirm"
+    },
+    "credentials": {
+      "title": "Credentials",
+      "username": "Username",
+      "password": "Password",
+      "example": "Example: your email or your Dexcom username",
+      "type_email": "Email",
+      "type_phone": "Phone number",
+      "email": "Email address",
+      "phone": "Phone number",
+      "phone_invalid": "Invalid phone number",
+      "phone_valid": "Valid phone number",
+      "email_invalid": "Invalid email address",
+      "email_valid": "Valid email address",
+      "email_suggestion": "Did you mean"
+    },
+    "settings": {
+      "title": "Settings",
+      "unit": "Unit",
+      "unit_mgdl": "mg/dL",
+      "unit_mmol": "mmol/L",
+      "autostart": "Autostart on login",
+      "threshold_low": "Low threshold",
+      "threshold_high": "High threshold",
+      "color_scheme": "Color scheme",
+      "color_scheme_light": "Light",
+      "color_scheme_dark": "Dark",
+      "select_placeholder": "Select value",
+      "select_unit_first": "Select unit first",
+      "color_hint": "Default colors correspond to clinical recommendations.",
+      "zone_very_high": "VERY HIGH",
+      "zone_high": "HIGH",
+      "zone_normal": "NORMAL",
+      "zone_low": "LOW",
+      "zone_critical_low": "CRITICAL LOW",
+      "autostart_label": "Should GlucoTray start with Windows?",
+      "change_credentials": "Change credentials",
+      "restart": "Restart",
+      "restart_required": "Changing the unit requires a restart to take effect.",
+      "restart_now": "Restart now",
+      "update_check": "Check for updates",
+      "contact": "Contact",
+      "repo": "Repository",
+      "update_installed": "Update installed. Restart GlucoTray to use the new version.",
+      "update_up_to_date": "GlucoTray is already up to date.",
+      "update_store_opened": "The Microsoft Store has been opened. Check there for an available update.",
+      "update_flatpak_hint": "Run the following command in your terminal to update:",
+      "update_unsupported": "Update checking is not supported on this system.",
+      "copy": "Copy",
+      "copied": "Copied!"
+    },
+    "review": {
+      "title": "Review",
+      "sensor": "Sensor",
+      "region": "Region",
+      "username": "Username",
+      "unit": "Unit",
+      "autostart": "Autostart",
+      "edit": "Edit"
+    },
+    "validation": {
+      "checking": "Checking connection...",
+      "success": "Connection successful",
+      "error_credentials": "Username or password incorrect",
+      "error_no_session": "No active Share session found",
+      "error_timeout": "Connection failed"
+    },
+    "completion": {
+    "title": "All set!",
+    "subtitle": "Your settings have been saved.",
+    "saving": "Saving...",
+    "error": "Error while saving",
+    "summary_sensor": "Sensor",
+    "summary_region": "Region",
+    "summary_username": "Username",
+    "summary_unit": "Unit",
+    "summary_threshold_low": "Min threshold",
+    "summary_threshold_high": "Max threshold",
+    "summary_autostart": "Autostart",
+    "summary_colors": "Color scheme",
+    "autostart_on": "Enabled",
+    "autostart_off": "Disabled",
+    "region_us": "USA",
+    "region_ous": "Outside US",
+    "region_jp": "Japan",
+    "finish": "Launch GlucoTray"
+    },
+    "errors": {
+    "InvalidCredentials": "Username or password incorrect. Please check your credentials.",
+    "NoSession": "No active Share session found. Activate Share in the Dexcom app and add a follower.",
+    "NoInternetConnection": "No internet connection detected. Please check your network and try again.",
+    "Timeout": "Connection to Dexcom API failed. Please try again.",
+    "RateLimit": "Too many requests. Please wait a moment and try again.",
+    "KeychainError": "Failed to save credentials. Please try again.",
+    "Unknown": "An unknown error occurred. Please try again."
+    },
+    "legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Use",
+    "disclaimer_title": "Medical Disclaimer",
+    "saving": "Saving...",
+    "accept_continue": "Accept and continue",
+    "accept_finish": "Accept and start wizard"
+    }
+  }
+}

@@ -1,0 +1,461 @@
+.wizard-screen {
+    position: relative;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.flag-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.section h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.option-group {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: border-color 0.2s;
+}
+
+.option.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.option input {
+    display: none;
+}
+
+.checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    color: var(--text-muted);
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.field-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.text-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 400px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.text-input:focus {
+    border-color: var(--accent);
+}
+
+.text-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.example-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.error-text {
+    font-size: 0.875rem;
+    color: var(--danger);
+    margin-top: 0.5rem;
+}
+
+.loading-overlay {
+    margin-top: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.input-valid {
+    border-color: var(--success);
+}
+
+.input-invalid {
+    border-color: var(--danger);
+}
+
+.validation-text {
+    font-size: 0.75rem;
+    margin-top: -0.25rem;
+}
+
+.validation-text.valid {
+    color: var(--success);
+}
+
+.validation-text.invalid {
+    color: var(--danger);
+}
+
+.suggestion-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    text-decoration: underline;
+}
+
+.suggestion-btn:hover {
+    opacity: 0.8;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 400px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.input-wrapper .text-input {
+    width: 100%;
+    padding-right: 2.5rem;
+}
+
+.eye-btn {
+    position: absolute;
+    right: 0.625rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.eye-btn:hover {
+    color: var(--text-primary);
+}
+
+.eye-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.password-display {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}
+
+.password-manager-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+.auth-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.select-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 220px;
+    transition: border-color 0.2s;
+}
+
+.select-input:focus {
+    border-color: var(--accent);
+}
+
+.select-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.hint-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.color-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+}
+
+.color-label {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 140px;
+}
+
+.color-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.color-swatch {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.color-picker {
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+}
+
+.color-hex {
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: var(--text-muted);
+    min-width: 4.5rem;
+}
+
+.summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.summary-value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.summary-row-colors {
+    align-items: center;
+}
+
+.summary-color-row {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.summary-swatch {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border);
+}
+
+    .legal-document {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background-color: var(--bg-secondary);
+        text-align: left;
+    }
+
+    .legal-document :global(h1) {
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .legal-document :global(h2) {
+        font-size: 1.05rem;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .legal-document :global(p) {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+    }
+
+    .legal-document :global(ul) {
+        margin-bottom: 0.5rem;
+        padding-left: 1.25rem;
+    }
+
+    .legal-progress {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+    }
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.footer-link {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.footer-link:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
+.footer-separator {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.flatpak-command-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.flatpak-command {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: nowrap;
+}

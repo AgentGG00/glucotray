@@ -1,0 +1,128 @@
+{
+  "wizard": {
+    "sensor": {
+      "title": "センサーシステムを選択",
+      "g6": "G6",
+      "g7": "G7"
+    },
+    "region": {
+      "title": "地域を選択",
+      "us": "アメリカ",
+      "ous": "アメリカ以外",
+      "jp": "日本"
+    },
+    "requirements": {
+      "title": "前提条件",
+      "app_installed": "Dexcomアプリがインストールされている",
+      "share_active": "Dexcom Shareが有効になっている",
+      "follower_added": "フォロワーが少なくとも1人追加されている"
+    },
+    "buttons": {
+      "next": "次へ",
+      "back": "戻る",
+      "cancel": "キャンセル",
+      "submit": "確認"
+    },
+    "credentials": {
+      "title": "認証情報",
+      "username": "ユーザー名",
+      "password": "パスワード",
+      "example": "例：メールアドレスまたはDexcomユーザー名",
+      "type_email": "メール",
+      "type_phone": "電話番号",
+      "email": "メールアドレス",
+      "phone": "電話番号",
+      "phone_invalid": "無効な電話番号",
+      "phone_valid": "有効な電話番号",
+      "email_invalid": "無効なメールアドレス",
+      "email_valid": "有効なメールアドレス",
+      "email_suggestion": "もしかして"
+    },
+    "settings": {
+      "title": "設定",
+      "unit": "単位",
+      "unit_mgdl": "mg/dL",
+      "unit_mmol": "mmol/L",
+      "autostart": "ログイン時に自動起動",
+      "threshold_low": "低しきい値",
+      "threshold_high": "高しきい値",
+      "color_scheme": "カラースキーム",
+      "select_placeholder": "値を選択",
+      "select_unit_first": "先に単位を選択してください",
+      "color_hint": "デフォルトの色は臨床推奨に基づいています。",
+      "zone_very_high": "非常に高い",
+      "zone_high": "高い",
+      "zone_normal": "正常",
+      "zone_low": "低い",
+      "zone_critical_low": "危険に低い",
+      "autostart_label": "WindowsとともにGlucoTrayを起動しますか？",
+      "change_credentials": "認証情報を変更",
+      "restart": "再起動",
+      "restart_required": "単位の変更を適用するには再起動が必要です。",
+      "restart_now": "今すぐ再起動",
+      "update_check": "更新を確認",
+      "contact": "お問い合わせ",
+      "repo": "リポジトリ",
+      "update_installed": "アップデートがインストールされました。新しいバージョンを使用するにはGlucoTrayを再起動してください。",
+      "update_up_to_date": "GlucoTrayは最新の状態です。",
+      "update_store_opened": "Microsoft Storeを開きました。利用可能な更新を確認してください。",
+      "update_flatpak_hint": "更新するには、ターミナルで以下のコマンドを実行してください。",
+      "update_unsupported": "このシステムでは更新の確認はサポートされていません。",
+      "copy": "コピー",
+      "copied": "コピーしました！"
+    },
+    "review": {
+      "title": "確認",
+      "sensor": "センサー",
+      "region": "地域",
+      "username": "ユーザー名",
+      "unit": "単位",
+      "autostart": "自動起動",
+      "edit": "変更"
+    },
+    "validation": {
+      "checking": "接続を確認中...",
+      "success": "接続成功",
+      "error_credentials": "ユーザー名またはパスワードが間違っています",
+      "error_no_session": "アクティブなShareセッションが見つかりません",
+      "error_timeout": "接続に失敗しました"
+    },
+    "completion": {
+    "title": "準備完了！",
+    "subtitle": "設定が保存されました。",
+    "saving": "保存中...",
+    "error": "保存中にエラーが発生しました",
+    "summary_sensor": "センサー",
+    "summary_region": "地域",
+    "summary_username": "ユーザー名",
+    "summary_unit": "単位",
+    "summary_threshold_low": "最小値",
+    "summary_threshold_high": "最大値",
+    "summary_autostart": "自動起動",
+    "summary_colors": "カラースキーム",
+    "autostart_on": "有効",
+    "autostart_off": "無効",
+    "region_us": "アメリカ",
+    "region_ous": "アメリカ以外",
+    "region_jp": "日本",
+    "finish": "GlucoTrayを起動"
+    },
+    "errors": {
+    "InvalidCredentials": "ユーザー名またはパスワードが間違っています。認証情報を確認してください。",
+    "NoSession": "アクティブなShareセッションが見つかりません。DexcomアプリでShareを有効にし、フォロワーを追加してください。",
+    "NoInternetConnection": "インターネット接続が検出されません。ネットワークを確認して再試行してください。",
+    "Timeout": "Dexcom APIへの接続に失敗しました。再試行してください。",
+    "RateLimit": "リクエストが多すぎます。少し待ってから再試行してください。",
+    "KeychainError": "認証情報の保存に失敗しました。再試行してください。",
+    "Unknown": "不明なエラーが発生しました。再試行してください。"
+    },
+    "legal": {
+    "privacy_title": "プライバシーポリシー",
+    "terms_title": "利用規約",
+    "disclaimer_title": "医療免責事項",
+    "saving": "保存中...",
+    "accept_continue": "同意して次へ",
+    "accept_finish": "同意してウィザードを開始"
+    }
+  }
+}
