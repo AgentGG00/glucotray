@@ -15,7 +15,6 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = []
 self-updater = ["tauri-plugin-updater"]
-single-instance = ["tauri-plugin-single-instance"]
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
