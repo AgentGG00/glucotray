@@ -20,6 +20,7 @@ use tracing::{info, error};
 const MMOL_TO_MGDL: f32 = 18.0182;
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SettingsData {
     username: String,
     region: String,
