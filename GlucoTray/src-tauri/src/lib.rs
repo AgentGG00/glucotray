@@ -1,4 +1,4 @@
-mod dexcom;
+/mod dexcom;
 mod db;
 mod worker;
 mod keychain;
@@ -106,6 +106,39 @@ async fn restart_app(app: tauri::AppHandle) {
     app.restart();
 }
 
+#[tauri::command]
+async fn save_legal_acceptance(
+    app: tauri::AppHandle,
+    legal_version: String,
+) -> Result<(), String> {
+    let db_path = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("glucotray.db");
+
+    let db_path_str = db_path.to_str().ok_or("Invalid db path")?.to_string();
+    let pool = init_db(&db_path_str).await.map_err(|e| e.to_string())?;
+
+    set_setting(&pool, "privacy_accepted", "true").await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "privacy_version", &legal_version).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "terms_accepted", "true").await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "terms_version", &legal_version).await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "disclaimer_accepted", "true").await.map_err(|e| e.to_string())?;
+    set_setting(&pool, "disclaimer_version", &legal_version).await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn read_legal_document(app: tauri::AppHandle, document: String, lang: String) -> Result<String, String> {
+    let filename = format!("{}.{}.md", document, lang);
+
+    let resource_path = app.path()
+        .resolve(format!("legal/{}", filename), tauri::path::BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+
+    std::fs::read_to_string(&resource_path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -123,6 +156,8 @@ pub fn run() {
             validate_credentials,
             save_wizard_data,
             restart_app,
+            read_legal_document,
+            save_legal_acceptance,
         ])
         .setup(|app| {
             let log_dir = app.path().app_log_dir()
